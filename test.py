@@ -36,15 +36,22 @@ def dataProcessing(data):
     df.columns = df.iloc[0]
     df = df[:-10]
     df  = df.rename(columns={'Tanggal':'Date','Tavg':'Temperature','RH_avg':'Humidity','ff_avg':'Wind','RR':'Rainfall'})
-    df = df.fillna(0)
+    #menentukan range data berdasarkan tanggal
     df = df.drop(df.index[0]) 
     df = df.drop(df.columns[0], axis=1)
-    df = df.set_index(index)
-    df = df.replace('',math.nan)
-    df  = df.dropna()
-    df = df.reset_index(drop=True)
-    for i in range(3):
-        arima_model(df,df.columns[i])
+    df = df.set_index(index) 
+    df = df.replace('',math.nan) 
+    df = df.replace('8888',math.nan)
+    # df  = df.dropna()
+    df = df.astype('float32')
+    df = df.fillna(df.mean())
+    df = df.loc['2019-01-01':'2019-12-31']
+    # df = df['Temperature'].fillna(df['Temperature'].mean())
+    
+    # Scaling berbasis Median Absolute Deviation (MAD)
+    print(df)
+    # for i in range(3):
+    #     arima_model(df,df.columns[i])
     # arima_model(df) 
 def get_credentials():
     scope_app =['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive'] 
