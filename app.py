@@ -14,7 +14,7 @@ import numpy as np
 from statsmodels.tsa.api import ExponentialSmoothing
 from sklearn.metrics import r2_score
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-
+from waitress import serve
 
 app = Flask(__name__)
 api = Api(app)
@@ -70,33 +70,41 @@ def grid_search(df):
     print(r2,'r2')
     print(mse,'mse')
     print(test)
+    print(best_params)
     return predictions.tolist() 
 
 def dataProcessing(data, periods, start, end): 
-    index = pd.date_range('2015-01-01', '21-12-2022', freq='D')
+    index = pd.date_range('01-01-2015', '21-12-2022', freq='D')
     df = pd.DataFrame(data)
     df.columns = df.iloc[0]
     df = df[:-10]
     df  = df.rename(columns={'Tanggal':'Date','Tavg':'Temperature','RH_avg':'Humidity','ff_avg':'Wind','RR':'Rainfall'})
+    
+    print(df['Date'])
+    
     df = df.drop(df.index[0]) 
     df = df.drop(df.columns[0], axis=1)
-    df = df.set_index(index)
-    df = df.replace('',math.nan)
-    df = df.replace('8888',math.nan)
-    df = df.astype('float32')
-    df = df.fillna(df.mean())
-    df = df.loc[start:end]
-    df = df.reset_index(drop=True)
-    Tanggal = pd.date_range('2019-12-31', periods=periods, freq='D')
-    Tanggal = Tanggal.tolist()
-    Temperature =df['Temperature'].tolist()
+    # start = df['Tanggal'][1]
+    # index = pd.date_range(df['Date'], df['Date'][-1:], freq='D')
+    # print(df['Date'])
+    # df = df.set_index(index)
+    # df = df.replace('',math.nan)
+    # df = df.replace('8888',math.nan)
+    # df = df.astype('float32')
+    # df = df.fillna(df.mean())
+    # df = df.loc[start:end]
+    # df = df.reset_index(drop=True)
+    # Tanggal = pd.date_range('2019-12-31', periods=periods, freq='D')
+    # Tanggal = Tanggal.tolist()
     response = {}
-    response['Tanggal'] = Tanggal
-    for i in range(3):
-        response[df.columns[i]] = grid_search(df[df.columns[i]])
+    # print(df['Rainfall'])
+    response['Hasil'] = df['Temperature'].tolist()
+    # response['Tanggal'] = Tanggal
+    # for i in range(3):
+    #     response[df.columns[i]] = grid_search(df[df.columns[i]])
     return response
 # Riau-Kab.Kampar_2015-2019
-# Data Harian - Table
+# Data Harian - Table   
 @app.route('/api')
 def get_credentials():
     sheetName = request.args.get('sheetName')
@@ -114,5 +122,4 @@ def get_credentials():
     return dataProcessing(data, int(periods), start, end)
 
 if __name__ == '__main__':
-    app.run(debug=True,port=5000)
-      
+    serve(app, host="0.0.0.0", port=8080)
