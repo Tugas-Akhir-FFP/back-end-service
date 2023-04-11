@@ -55,3 +55,4 @@ virtualenv==20.19.0
 virtualenv-clone==0.5.7
 Werkzeug==2.2.3
 gunicorn
+waitress
