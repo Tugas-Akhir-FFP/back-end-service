@@ -1,15 +1,20 @@
-FROM python:latest
+# Base image
+FROM python:3.8-slim-buster
 
-COPY . /app
-
+# Set the working directory in the container
 WORKDIR /app
 
-RUN pip install virtualenv
+# Copy the requirements file into the container
+COPY requirements.txt .
 
-RUN virtualenv venv
+# Install the required Python packages
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN . venv/bin/activate && pip install -r requirements.txt
+# Copy the application code into the container
+COPY . .
 
-EXPOSE 5000
+# Expose the port that the application will be running on
+EXPOSE 8000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "wsgi:app"]
+# Start the Gunicorn server to serve the application
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]
