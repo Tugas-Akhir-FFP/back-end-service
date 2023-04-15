@@ -73,30 +73,37 @@ def grid_search(df):
     print(best_params)
     return predictions.tolist() 
 
+
 def dataProcessing(data, periods, start, end): 
-    try:
-        data = data[1:]  # menghapus baris label kolom dari data
-        df = pd.DataFrame(data, columns=['Tanggal', 'Tavg', 'RH_avg', 'ff_avg', 'RR'])  # hanya memasukkan data
-        df = df.rename(columns={'Tanggal': 'Date', 'Tavg': 'Temperature',
-                                'RH_avg': 'Humidity', 'ff_avg': 'Wind', 'RR': 'Rainfall'})
-        df['Date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y', errors='coerce')
+    df = pd.DataFrame(data)
+    df.columns = df.iloc[0]
+    df = df[:-10]
+    df = df.rename(columns={'Tanggal':'Date','Tavg':'Temperature','RH_avg':'Humidity','ff_avg':'Wind','RR':'Rainfall'})
+    
+    #convert kolom date to datetime format
+    df['Date'] = pd.to_datetime(df['Date'], format='%Y/%m/%d')
+    df.set_index('Date', inplace=True)
 
-        # filter data within date range
-        df = df[(df['Date'] >= start) & (df['Date'] <= end)]
+    #Filter data based on date range
+    mask = (df.index >= start) & (df.index <= end)
+    df = df.loc[mask]
+
+
+    print(df['Date'])
+    df = df.drop(df.index[0])
+    df = df.drop(df.columns[0], axis=1)
+
+    #show data temparature based on date range
+    
+    response = {}
+    response['Hasil'] = df['Temperature'].tolist()
+
+    return response
+
         
-        # convert columns to float and fill missing values
-        df[['Temperature', 'Humidity', 'Wind', 'Rainfall']] = df[['Temperature', 'Humidity', 'Wind', 'Rainfall']].astype(float)
-        df[['Temperature', 'Humidity', 'Wind', 'Rainfall']] = df[['Temperature', 'Humidity', 'Wind', 'Rainfall']].fillna(method='ffill')
 
-        # set Date as index and reindex with complete date range
-        df = df.set_index('Date')
-        df = df.reindex(index, fill_value=np.nan)
-        response = {}
-        response['Hasil'] = df['Temperature'].tolist()[-periods:]
 
-        return response
-    except Exception as e:
-        return {'error': str(e)}
+  
 # Riau-Kab.Kampar_2015-2019
 # Data Harian - Table   
 @app.route('/api')
@@ -113,6 +120,7 @@ def get_credentials():
     sheet = client.open(sheetName)
     worksheet = sheet.worksheet(worksheetName)
     data = worksheet.get_all_values()
+
     return dataProcessing(data, int(periods), start, end)
 
 if __name__ == '__main__':
