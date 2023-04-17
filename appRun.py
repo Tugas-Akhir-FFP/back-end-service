@@ -75,32 +75,96 @@ def grid_search(df):
 
 
 def dataProcessing(data, periods, start, end): 
+    index = pd.date_range(start, end, freq='D')
     df = pd.DataFrame(data)
     df.columns = df.iloc[0]
-    df = df[:-10]
+    df = df[:-periods]
     df = df.rename(columns={'Tanggal':'Date','Tavg':'Temperature','RH_avg':'Humidity','ff_avg':'Wind','RR':'Rainfall'})
     
-    #convert kolom date to datetime format
-    df['Date'] = pd.to_datetime(df['Date'], format='%Y/%m/%d')
-    df.set_index('Date', inplace=True)
-
-    #Filter data based on date range
-    mask = (df.index >= start) & (df.index <= end)
-    df = df.loc[mask]
-
-
-    print(df['Date'])
-    df = df.drop(df.index[0])
-    df = df.drop(df.columns[0], axis=1)
-
-    #show data temparature based on date range
+    # filter data by range date start and end
     
-    response = {}
-    response['Hasil'] = df['Temperature'].tolist()
+
+    # #select data by column 
+    # df_filter = df.loc[(df['Date'] >= start) & (df['Date'] <= end), :]
+
+    # ##case 2
+    # df = df.drop(df.index[0]) 
+    # df['Date'] = pd.to_datetime(df['Date'])
+    # df_filtered = df[df['Date'].between(start, end)]
+    
+    # # select temperature data
+    # temperature_data = df_filtered.loc[:, ['Date', 'Temperature']]
+    # temperature_data = temperature_data.set_index('Date')
+    # print(temperature_data)
+    
+    # return df_filtered
+
+    # ## Case 3
+    # df = df.drop(df.index[0]) 
+    # df['Date'] = pd.to_datetime(df['Date'])
+    # df_filtered = df[df['Date'].between(start, end)]
+    
+    # # select temperature data
+    # temperature_data = df_filtered.loc[:, ['Date', 'Temperature']]
+    # temperature_data = temperature_data.set_index('Date')
+    # temperature_list = temperature_data['Temperature'].tolist()
+    
+    # return temperature_list
+
+    # # ## Case 4
+    # df = df.drop(df.index[0]) 
+    # df['Date'] = pd.to_datetime(df['Date'])
+    # df_filtered = df[df['Date'].between(start, end)]
+    
+    # # select temperature data
+    # temperature_data = df_filtered.loc[:, ['Date', 'Temperature']]
+    # temperature_data = temperature_data.set_index('Date')
+    # date_list = df_filtered['Date'].tolist()
+    # temperature_list = temperature_data['Temperature'].tolist()
+
+    # response = {
+    #     'Date' : date_list,
+    #     'Temperature' : temperature_list
+    # }
+
+    # return response
+
+    # ## Case 5
+    # df = df.drop(df.index[0]) 
+    # df['Date'] = pd.to_datetime(df['Date'])
+    # df_filtered = df[df['Date'].between(start, end)]
+
+    # # select temperature data
+    # temperature_data = df_filtered.loc[:, ['Date', 'Temperature']]
+    # temperature_data = temperature_data.set_index('Date')
+    # temperature_list = temperature_data['Temperature'].tolist()
+    # date_list = temperature_data.index.tolist()
+
+    # response = {
+    #     'Date' : date_list,
+    #     'Temperature' : temperature_list
+    # }
+
+    # return response
+
+    # ## Case 6
+    df = df.drop(df.index[0]) 
+    df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
+    df_filtered = df[df['Date'].between(start, end)]
+
+    # select temperature data
+    temperature_data = df_filtered[['Date', 'Temperature']]
+    temperature_data = temperature_data.set_index('Date')
+    temperature_list = temperature_data['Temperature'].tolist()
+    date_list = df_filtered['Date'].tolist()
+
+    response = {
+        'Date' : date_list,
+        'Temperature' : temperature_list
+    }
 
     return response
 
-        
 
 
   
