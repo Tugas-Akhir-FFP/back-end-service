@@ -65,7 +65,7 @@ def grid_search(df):
     predictions = model_fit.forecast(len(test))
     r2 = r2_score(test, predictions)
     mse = mean_squared_error(test, predictions)  
-    hasil = {};
+    hasil = {}
     hasil['Hasil'] = predictions.tolist()
     print(r2,'r2')
     print(mse,'mse')
@@ -81,86 +81,108 @@ def dataProcessing(data, periods, start, end):
     df = df[:-periods]
     df = df.rename(columns={'Tanggal':'Date','Tavg':'Temperature','RH_avg':'Humidity','ff_avg':'Wind','RR':'Rainfall'})
     
-    # filter data by range date start and end
-    
-
-    # #select data by column 
-    # df_filter = df.loc[(df['Date'] >= start) & (df['Date'] <= end), :]
-
-    # ##case 2
-    # df = df.drop(df.index[0]) 
-    # df['Date'] = pd.to_datetime(df['Date'])
-    # df_filtered = df[df['Date'].between(start, end)]
-    
-    # # select temperature data
-    # temperature_data = df_filtered.loc[:, ['Date', 'Temperature']]
-    # temperature_data = temperature_data.set_index('Date')
-    # print(temperature_data)
-    
-    # return df_filtered
-
-    # ## Case 3
-    # df = df.drop(df.index[0]) 
-    # df['Date'] = pd.to_datetime(df['Date'])
-    # df_filtered = df[df['Date'].between(start, end)]
-    
-    # # select temperature data
-    # temperature_data = df_filtered.loc[:, ['Date', 'Temperature']]
-    # temperature_data = temperature_data.set_index('Date')
-    # temperature_list = temperature_data['Temperature'].tolist()
-    
-    # return temperature_list
-
-    # # ## Case 4
-    # df = df.drop(df.index[0]) 
-    # df['Date'] = pd.to_datetime(df['Date'])
-    # df_filtered = df[df['Date'].between(start, end)]
-    
-    # # select temperature data
-    # temperature_data = df_filtered.loc[:, ['Date', 'Temperature']]
-    # temperature_data = temperature_data.set_index('Date')
-    # date_list = df_filtered['Date'].tolist()
-    # temperature_list = temperature_data['Temperature'].tolist()
-
-    # response = {
-    #     'Date' : date_list,
-    #     'Temperature' : temperature_list
-    # }
-
-    # return response
-
-    # ## Case 5
-    # df = df.drop(df.index[0]) 
-    # df['Date'] = pd.to_datetime(df['Date'])
-    # df_filtered = df[df['Date'].between(start, end)]
-
-    # # select temperature data
-    # temperature_data = df_filtered.loc[:, ['Date', 'Temperature']]
-    # temperature_data = temperature_data.set_index('Date')
-    # temperature_list = temperature_data['Temperature'].tolist()
-    # date_list = temperature_data.index.tolist()
-
-    # response = {
-    #     'Date' : date_list,
-    #     'Temperature' : temperature_list
-    # }
-
-    # return response
-
-    # ## Case 6
+    #filter data by range date start and end
     df = df.drop(df.index[0]) 
     df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
     df_filtered = df[df['Date'].between(start, end)]
-
+    
+    
     # select temperature data
     temperature_data = df_filtered[['Date', 'Temperature']]
     temperature_data = temperature_data.set_index('Date')
     temperature_list = temperature_data['Temperature'].tolist()
     date_list = df_filtered['Date'].tolist()
 
+    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for temperature
+    temperature_data = temperature_data.replace('8888', np.nan)
+    temperature_data = temperature_data.replace('', np.nan)
+    temperature_data = temperature_data.fillna(method='ffill')
+    temperature_data = temperature_data.fillna(method='bfill')
+    temperature_data = temperature_data.astype(float)
+    temperature_data = temperature_data.reset_index()
+    temperature_data = temperature_data.set_index('Date')
+    temperature_data = temperature_data.resample('D').mean()
+    #return to list
+    temperature_list = temperature_data['Temperature'].tolist()
+
+    # Select humidity data
+    humidity_data = df_filtered[['Date', 'Humidity']]
+    humidity_data = humidity_data.set_index('Date')
+    humidity_list = humidity_data['Humidity'].tolist()
+    date_list = df_filtered['Date'].tolist()
+
+    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for humidity
+    humidity_data = humidity_data.replace('8888', np.nan)
+    humidity_data = humidity_data.replace('', np.nan)
+    humidity_data = humidity_data.fillna(method='ffill')
+    humidity_data = humidity_data.fillna(method='bfill')
+    humidity_data = humidity_data.astype(float)
+    humidity_data = humidity_data.reset_index()
+    humidity_data = humidity_data.set_index('Date')
+    humidity_data = humidity_data.resample('D').mean()
+    #return to list
+    humidity_list = humidity_data['Humidity'].tolist()
+
+    # Select wind data
+    wind_data = df_filtered[['Date', 'Wind']]
+    wind_data = wind_data.set_index('Date')
+    wind_list = wind_data['Wind'].tolist()
+    date_list = df_filtered['Date'].tolist()
+
+    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for wind
+    wind_data = wind_data.replace('8888', np.nan)
+    wind_data = wind_data.replace('', np.nan)
+    wind_data = wind_data.fillna(method='ffill')
+    wind_data = wind_data.fillna(method='bfill')
+    wind_data = wind_data.astype(float)
+    wind_data = wind_data.reset_index()
+    wind_data = wind_data.set_index('Date')
+    wind_data = wind_data.resample('D').mean()
+    #return to list
+    wind_list = wind_data['Wind'].tolist()
+
+
+    # Select rainfall data
+    rainfall_data = df_filtered[['Date', 'Rainfall']]
+    rainfall_data = rainfall_data.set_index('Date')
+    rainfall_list = rainfall_data['Rainfall'].tolist()
+    date_list = df_filtered['Date'].tolist()
+
+    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for rainfall
+    rainfall_data = rainfall_data.replace('8888', np.nan)
+    rainfall_data = rainfall_data.replace('', np.nan)
+    rainfall_data = rainfall_data.fillna(method='ffill')
+    rainfall_data = rainfall_data.fillna(method='bfill')
+    rainfall_data = rainfall_data.astype(float)
+    rainfall_data = rainfall_data.reset_index()
+    rainfall_data = rainfall_data.set_index('Date')
+    rainfall_data = rainfall_data.resample('D').mean()
+    #return to list
+    rainfall_list = rainfall_data['Rainfall'].tolist()
+
+    #Create new variable to implement grid search for all parameters
+    grid_temp = grid_search(temperature_data)
+    grid_humidity = grid_search(humidity_data)
+    grid_wind = grid_search(wind_data)
+    grid_rainfall = grid_search(rainfall_data)
+
+    #hasil semua prediksi parameter
+    print("--------  TEMPERATURE  --------")
+    print(grid_temp)
+    print("--------  HUMIDITY  --------")
+    print(grid_humidity)
+    print("--------  WIND  --------")
+    print(grid_wind)
+    print("--------  RAINFALL  --------")
+    print(grid_rainfall)
+
+
     response = {
         'Date' : date_list,
-        'Temperature' : temperature_list
+        'Temperature' : temperature_list,
+        'Humidity' : humidity_list,
+        'Wind' : wind_list,
+        'Rainfall' : rainfall_list
     }
 
     return response
