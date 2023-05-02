@@ -29,7 +29,7 @@ param_grid = {'seasonal': ['additive', 'multiplicative'],
 
 def grid_search(df):
     print(len(df))
-    train, test = df[1700:1800], df[1800:1826]
+    train, test = df[1:3000], df[3000:3012]
     results = []
     for seasonal in param_grid['seasonal']:
         for trend in param_grid['trend']:
@@ -87,41 +87,41 @@ def dataProcessing(data, periods, start, end):
     df_filtered = df[df['Date'].between(start, end)]
     
     
-    # select temperature data
-    temperature_data = df_filtered[['Date', 'Temperature']]
-    temperature_data = temperature_data.set_index('Date')
-    temperature_list = temperature_data['Temperature'].tolist()
-    date_list = df_filtered['Date'].tolist()
+    # # select temperature data
+    # temperature_data = df_filtered[['Date', 'Temperature']]
+    # temperature_data = temperature_data.set_index('Date')
+    # temperature_list = temperature_data['Temperature'].tolist()
+    # date_list = df_filtered['Date'].tolist()
 
-    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for temperature
-    temperature_data = temperature_data.replace('8888', np.nan)
-    temperature_data = temperature_data.replace('', np.nan)
-    temperature_data = temperature_data.fillna(method='ffill')
-    temperature_data = temperature_data.fillna(method='bfill')
-    temperature_data = temperature_data.astype(float)
-    temperature_data = temperature_data.reset_index()
-    temperature_data = temperature_data.set_index('Date')
-    temperature_data = temperature_data.resample('D').mean()
-    #return to list
-    temperature_list = temperature_data['Temperature'].tolist()
+    # #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for temperature
+    # temperature_data = temperature_data.replace('8888', np.nan)
+    # temperature_data = temperature_data.replace('', np.nan)
+    # temperature_data = temperature_data.fillna(method='ffill')
+    # temperature_data = temperature_data.fillna(method='bfill')
+    # temperature_data = temperature_data.astype(float)
+    # temperature_data = temperature_data.reset_index()
+    # temperature_data = temperature_data.set_index('Date')
+    # temperature_data = temperature_data.resample('D').mean()
+    # #return to list
+    # temperature_list = temperature_data['Temperature'].tolist()
 
-    # Select humidity data
-    humidity_data = df_filtered[['Date', 'Humidity']]
-    humidity_data = humidity_data.set_index('Date')
-    humidity_list = humidity_data['Humidity'].tolist()
-    date_list = df_filtered['Date'].tolist()
+    # # Select humidity data
+    # humidity_data = df_filtered[['Date', 'Humidity']]
+    # humidity_data = humidity_data.set_index('Date')
+    # humidity_list = humidity_data['Humidity'].tolist()
+    # date_list = df_filtered['Date'].tolist()
 
-    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for humidity
-    humidity_data = humidity_data.replace('8888', np.nan)
-    humidity_data = humidity_data.replace('', np.nan)
-    humidity_data = humidity_data.fillna(method='ffill')
-    humidity_data = humidity_data.fillna(method='bfill')
-    humidity_data = humidity_data.astype(float)
-    humidity_data = humidity_data.reset_index()
-    humidity_data = humidity_data.set_index('Date')
-    humidity_data = humidity_data.resample('D').mean()
-    #return to list
-    humidity_list = humidity_data['Humidity'].tolist()
+    # #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for humidity
+    # humidity_data = humidity_data.replace('8888', np.nan)
+    # humidity_data = humidity_data.replace('', np.nan)
+    # humidity_data = humidity_data.fillna(method='ffill')
+    # humidity_data = humidity_data.fillna(method='bfill')
+    # humidity_data = humidity_data.astype(float)
+    # humidity_data = humidity_data.reset_index()
+    # humidity_data = humidity_data.set_index('Date')
+    # humidity_data = humidity_data.resample('D').mean()
+    # #return to list
+    # humidity_list = humidity_data['Humidity'].tolist()
 
     # Select wind data
     wind_data = df_filtered[['Date', 'Wind']]
@@ -142,47 +142,48 @@ def dataProcessing(data, periods, start, end):
     wind_list = wind_data['Wind'].tolist()
 
 
-    # Select rainfall data
-    rainfall_data = df_filtered[['Date', 'Rainfall']]
-    rainfall_data = rainfall_data.set_index('Date')
-    rainfall_list = rainfall_data['Rainfall'].tolist()
-    date_list = df_filtered['Date'].tolist()
+    # # Select rainfall data
+    # rainfall_data = df_filtered[['Date', 'Rainfall']]
+    # rainfall_data = rainfall_data.set_index('Date')
+    # rainfall_list = rainfall_data['Rainfall'].tolist()
+    # date_list = df_filtered['Date'].tolist()
 
-    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for rainfall
-    rainfall_data = rainfall_data.replace('8888', np.nan)
-    rainfall_data = rainfall_data.replace('', np.nan)
-    rainfall_data = rainfall_data.fillna(method='ffill')
-    rainfall_data = rainfall_data.fillna(method='bfill')
-    rainfall_data = rainfall_data.astype(float)
-    rainfall_data = rainfall_data.reset_index()
-    rainfall_data = rainfall_data.set_index('Date')
-    rainfall_data = rainfall_data.resample('D').mean()
-    #return to list
-    rainfall_list = rainfall_data['Rainfall'].tolist()
+    # #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for rainfall
+    # rainfall_data = rainfall_data.replace('8888', np.nan)
+    # rainfall_data = rainfall_data.replace('', np.nan)
+    # rainfall_data = rainfall_data.fillna(method='ffill')
+    # rainfall_data = rainfall_data.fillna(method='bfill')
+    # rainfall_data = rainfall_data.astype(float)
+    # rainfall_data = rainfall_data.reset_index()
+    # rainfall_data = rainfall_data.set_index('Date')
+    # rainfall_data = rainfall_data.resample('D').mean()
+    # #return to list
+    # rainfall_list = rainfall_data['Rainfall'].tolist()
 
     #Create new variable to implement grid search for all parameters
-    grid_temp = grid_search(temperature_data)
-    grid_humidity = grid_search(humidity_data)
+    # grid_temp = grid_search(temperature_data)
+    # grid_humidity = grid_search(humidity_data)
     grid_wind = grid_search(wind_data)
-    grid_rainfall = grid_search(rainfall_data)
+    # grid_rainfall = grid_search(rainfall_data)
 
+    
     #hasil semua prediksi parameter
-    print("--------  TEMPERATURE  --------")
-    print(grid_temp)
-    print("--------  HUMIDITY  --------")
-    print(grid_humidity)
+    # print("--------  TEMPERATURE  --------")
+    # print(grid_temp)
+    # print("--------  HUMIDITY  --------")
+    # print(grid_humidity)
     print("--------  WIND  --------")
     print(grid_wind)
-    print("--------  RAINFALL  --------")
-    print(grid_rainfall)
+    # print("--------  RAINFALL  --------")
+    # print(grid_rainfall)
 
 
     response = {
         'Date' : date_list,
-        'Temperature' : temperature_list,
-        'Humidity' : humidity_list,
+        # 'Temperature' : temperature_list,
+        # 'Humidity' : humidity_list,
         'Wind' : wind_list,
-        'Rainfall' : rainfall_list
+        # 'Rainfall' : rainfall_list
     }
 
     return response
