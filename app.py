@@ -74,35 +74,29 @@ def grid_search(df):
     return predictions.tolist() 
 
 def dataProcessing(data, periods, start, end): 
-    index = pd.date_range('01-01-2015', '21-12-2022', freq='D')
-    df = pd.DataFrame(data)
-    df.columns = df.iloc[0]
-    df = df[:-10]
-    df  = df.rename(columns={'Tanggal':'Date','Tavg':'Temperature','RH_avg':'Humidity','ff_avg':'Wind','RR':'Rainfall'})
-    
-    print(df['Date'])
-    
-    df = df.drop(df.index[0]) 
-    df = df.drop(df.columns[0], axis=1)
-    # start = df['Tanggal'][1]
-    # index = pd.date_range(df['Date'], df['Date'][-1:], freq='D')
-    # print(df['Date'])
-    # df = df.set_index(index)
-    # df = df.replace('',math.nan)
-    # df = df.replace('8888',math.nan)
-    # df = df.astype('float32')
-    # df = df.fillna(df.mean())
-    # df = df.loc[start:end]
-    # df = df.reset_index(drop=True)
-    # Tanggal = pd.date_range('2019-12-31', periods=periods, freq='D')
-    # Tanggal = Tanggal.tolist()
-    response = {}
-    # print(df['Rainfall'])
-    response['Hasil'] = df['Temperature'].tolist()
-    # response['Tanggal'] = Tanggal
-    # for i in range(3):
-    #     response[df.columns[i]] = grid_search(df[df.columns[i]])
-    return response
+    try:
+        data = data[1:]  # menghapus baris label kolom dari data
+        df = pd.DataFrame(data, columns=['Tanggal', 'Tavg', 'RH_avg', 'ff_avg', 'RR'])  # hanya memasukkan data
+        df = df.rename(columns={'Tanggal': 'Date', 'Tavg': 'Temperature',
+                                'RH_avg': 'Humidity', 'ff_avg': 'Wind', 'RR': 'Rainfall'})
+        df['Date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y', errors='coerce')
+
+        # filter data within date range
+        df = df[(df['Date'] >= start) & (df['Date'] <= end)]
+        
+        # convert columns to float and fill missing values
+        df[['Temperature', 'Humidity', 'Wind', 'Rainfall']] = df[['Temperature', 'Humidity', 'Wind', 'Rainfall']].astype(float)
+        df[['Temperature', 'Humidity', 'Wind', 'Rainfall']] = df[['Temperature', 'Humidity', 'Wind', 'Rainfall']].fillna(method='ffill')
+
+        # set Date as index and reindex with complete date range
+        df = df.set_index('Date')
+        df = df.reindex(index, fill_value=np.nan)
+        response = {}
+        response['Hasil'] = df['Temperature'].tolist()[-periods:]
+
+        return response
+    except Exception as e:
+        return {'error': str(e)}
 # Riau-Kab.Kampar_2015-2019
 # Data Harian - Table   
 @app.route('/api')
@@ -122,4 +116,4 @@ def get_credentials():
     return dataProcessing(data, int(periods), start, end)
 
 if __name__ == '__main__':
-    serve(app, host="0.0.0.0", port=8080)
+    app.run(debug=True, port=5000)
