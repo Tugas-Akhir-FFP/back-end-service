@@ -54,14 +54,14 @@ def grid_search(df):
                                 continue
     
     # Cari parameter yang menghasilkan r-square terbaik
-    best_params = max(results, key=lambda x: x[-1])
+    s= max(results, key=lambda x: x[-1])
     model = ExponentialSmoothing(train,
-                                 seasonal=best_params[0],
-                                 trend=best_params[1],
-                                 seasonal_periods=best_params[2])
+                                seasonal=best_params[0],
+                                trend=best_params[1],
+                                seasonal_periods=best_params[2])
     model_fit = model.fit(smoothing_level=best_params[3], 
-                          smoothing_trend=best_params[4], 
-                          smoothing_seasonal=best_params[5])
+                        smoothing_trend=best_params[4], 
+                        smoothing_seasonal=best_params[5])
     predictions = model_fit.forecast(len(test))
     r2 = r2_score(test, predictions)
     mse = mean_squared_error(test, predictions)  
@@ -122,4 +122,4 @@ def get_credentials():
     return dataProcessing(data, int(periods), start, end)
 
 if __name__ == '__main__':
-    serve(app, host="0.0.0.0", port=8080)
+    app.run(debug=True, host='127.0.0.1', port=5000)
