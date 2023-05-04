@@ -51,7 +51,7 @@ def grid_search(df):
                                 r2 = r2_score(test, predictions)
                                 results.append((seasonal, trend, seasonal_period, smoothing_level, smoothing_trend, smoothing_seasonal, r2))
                             except:
-                                continue
+                                print('error')
     
     # Cari parameter yang menghasilkan r-square terbaik
     best_params = max(results, key=lambda x: x[-1])
@@ -63,12 +63,23 @@ def grid_search(df):
                           smoothing_trend=best_params[4], 
                           smoothing_seasonal=best_params[5])
     predictions = model_fit.forecast(len(test))
+    #change prediction value round to 2 decimal
+    predictions = np.array(predictions).flatten().round(2)
+    test = np.array(test).flatten()
+
+    #print type of data test
+    print(type(test))
+    print(type(predictions))
     r2 = r2_score(test, predictions)
-    mse = mean_squared_error(test, predictions)  
+    # mse = mean_squared_error(test, predictions)  
+    mse = np.square(np.subtract(test,predictions)).mean()
+    rmse = math.sqrt(mse)
+    print(np.array(test))
     hasil = {}
-    hasil['Hasil'] = predictions.tolist()
+    hasil['Hasil'] = predictions.tolist()   
     print(r2,'r2')
     print(mse,'mse')
+    print(rmse,'rmse')
     print(test)
     print(best_params)
     return predictions.tolist() 
@@ -87,23 +98,23 @@ def dataProcessing(data, periods, start, end):
     df_filtered = df[df['Date'].between(start, end)]
     
     
-    # # select temperature data
-    # temperature_data = df_filtered[['Date', 'Temperature']]
-    # temperature_data = temperature_data.set_index('Date')
-    # temperature_list = temperature_data['Temperature'].tolist()
-    # date_list = df_filtered['Date'].tolist()
+    # select temperature data
+    temperature_data = df_filtered[['Date', 'Temperature']]
+    temperature_data = temperature_data.set_index('Date')
+    temperature_list = temperature_data['Temperature'].tolist()
+    date_list = df_filtered['Date'].tolist()
 
-    # #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for temperature
-    # temperature_data = temperature_data.replace('8888', np.nan)
-    # temperature_data = temperature_data.replace('', np.nan)
-    # temperature_data = temperature_data.fillna(method='ffill')
-    # temperature_data = temperature_data.fillna(method='bfill')
-    # temperature_data = temperature_data.astype(float)
-    # temperature_data = temperature_data.reset_index()
-    # temperature_data = temperature_data.set_index('Date')
-    # temperature_data = temperature_data.resample('D').mean()
-    # #return to list
-    # temperature_list = temperature_data['Temperature'].tolist()
+    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for temperature
+    temperature_data = temperature_data.replace('8888', np.nan)
+    temperature_data = temperature_data.replace('', np.nan)
+    temperature_data = temperature_data.fillna(method='ffill')
+    temperature_data = temperature_data.fillna(method='bfill')
+    temperature_data = temperature_data.astype(float)
+    temperature_data = temperature_data.reset_index()
+    temperature_data = temperature_data.set_index('Date')
+    temperature_data = temperature_data.resample('D').mean()
+    #return to list
+    temperature_list = temperature_data['Temperature'].tolist()
 
     # # Select humidity data
     # humidity_data = df_filtered[['Date', 'Humidity']]
@@ -123,23 +134,23 @@ def dataProcessing(data, periods, start, end):
     # #return to list
     # humidity_list = humidity_data['Humidity'].tolist()
 
-    # Select wind data
-    wind_data = df_filtered[['Date', 'Wind']]
-    wind_data = wind_data.set_index('Date')
-    wind_list = wind_data['Wind'].tolist()
-    date_list = df_filtered['Date'].tolist()
+    # # Select wind data
+    # wind_data = df_filtered[['Date', 'Wind']]
+    # wind_data = wind_data.set_index('Date')
+    # wind_list = wind_data['Wind'].tolist()
+    # date_list = df_filtered['Date'].tolist()
 
-    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for wind
-    wind_data = wind_data.replace('8888', np.nan)
-    wind_data = wind_data.replace('', np.nan)
-    wind_data = wind_data.fillna(method='ffill')
-    wind_data = wind_data.fillna(method='bfill')
-    wind_data = wind_data.astype(float)
-    wind_data = wind_data.reset_index()
-    wind_data = wind_data.set_index('Date')
-    wind_data = wind_data.resample('D').mean()
-    #return to list
-    wind_list = wind_data['Wind'].tolist()
+    # #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for wind
+    # wind_data = wind_data.replace('8888', np.nan)
+    # wind_data = wind_data.replace('', np.nan)
+    # wind_data = wind_data.fillna(method='ffill')
+    # wind_data = wind_data.fillna(method='bfill')
+    # wind_data = wind_data.astype(float)
+    # wind_data = wind_data.reset_index()
+    # wind_data = wind_data.set_index('Date')
+    # wind_data = wind_data.resample('D').mean()
+    # #return to list
+    # wind_list = wind_data['Wind'].tolist()
 
 
     # # Select rainfall data
@@ -161,28 +172,29 @@ def dataProcessing(data, periods, start, end):
     # rainfall_list = rainfall_data['Rainfall'].tolist()
 
     #Create new variable to implement grid search for all parameters
-    # grid_temp = grid_search(temperature_data)
+    grid_temp = grid_search(temperature_data)
     # grid_humidity = grid_search(humidity_data)
-    grid_wind = grid_search(wind_data)
+    # grid_wind = grid_search(wind_data)
     # grid_rainfall = grid_search(rainfall_data)
 
     
     #hasil semua prediksi parameter
-    # print("--------  TEMPERATURE  --------")
-    # print(grid_temp)
+    print("--------  TEMPERATURE  --------")
+    print(grid_temp)
     # print("--------  HUMIDITY  --------")
     # print(grid_humidity)
-    print("--------  WIND  --------")
-    print(grid_wind)
+    # print("--------  WIND  --------")
+    # print(grid_wind)
+    # print(wind_data)
     # print("--------  RAINFALL  --------")
     # print(grid_rainfall)
 
 
     response = {
         'Date' : date_list,
-        # 'Temperature' : temperature_list,
+        'Temperature' : temperature_list,
         # 'Humidity' : humidity_list,
-        'Wind' : wind_list,
+        # 'Wind' : wind_list,
         # 'Rainfall' : rainfall_list
     }
 
