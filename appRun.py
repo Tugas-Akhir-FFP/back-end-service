@@ -15,17 +15,19 @@ from statsmodels.tsa.api import ExponentialSmoothing
 from sklearn.metrics import r2_score
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from waitress import serve
+import skfuzzy as fuzz 
+from skfuzzy import control as ctrl
 
 app = Flask(__name__)
 api = Api(app)
 CORS(app)
 
 param_grid = {'seasonal': ['additive', 'multiplicative'],
-              'trend': ['additive', 'multiplicative'],
-              'seasonal_periods': [4, 12],
-              'smoothing_level': np.linspace(0.1, 0.9, 9),
-              'smoothing_trend': np.linspace(0.1, 0.9, 9),
-              'smoothing_seasonal': np.linspace(0.1, 0.9, 9)}
+            'trend': ['additive', 'multiplicative'],
+            'seasonal_periods': [4, 12],
+            'smoothing_level': np.linspace(0.1, 0.9, 9),
+            'smoothing_trend': np.linspace(0.1, 0.9, 9),
+            'smoothing_seasonal': np.linspace(0.1, 0.9, 9)}
 
 def grid_search(df):
     print(len(df))
@@ -64,7 +66,7 @@ def grid_search(df):
                           smoothing_seasonal=best_params[5])
     predictions = model_fit.forecast(len(test))
     #change prediction value round to 2 decimal
-    predictions = np.array(predictions).flatten().round(2)
+    predictions = np.array(predictions).flatten().round(0)
     test = np.array(test).flatten()
 
     #print type of data test
@@ -80,10 +82,33 @@ def grid_search(df):
     print(r2,'r2')
     print(mse,'mse')
     print(rmse,'rmse')
+    print(best_params,"best param")
+    print(predictions)
+    
     print(test)
-    print(best_params)
     return predictions.tolist() 
 
+
+
+def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal):
+    train, test = df[1:200], df[200:210]
+    model = ExponentialSmoothing(train,
+                                seasonal=seasonal,
+                                trend=trend,
+                                seasonal_periods=periods)
+    model_fit = model.fit(smoothing_level=slevel, 
+                        smoothing_trend=stren, 
+                        smoothing_seasonal=sseasonal)
+    predictions = model_fit.forecast(len(test))
+    predictions = np.array(predictions).flatten().round(2)
+    test = np.array(test).flatten()
+    mse = np.square(np.subtract(test,predictions)).mean()
+    r2 = r2_score(test, predictions)
+    rmse = math.sqrt(mse)
+    value = []
+    value.append((mse,rmse,r2))
+    print(value)
+    return predictions.tolist()
 #create function for formula fwi calculation using 4 parameter
 def fwiCalculation(temperature, humidity, wind, rainfall):
     #calculate ffmc
@@ -152,6 +177,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for temperature
     temperature_data = temperature_data.replace('8888', np.nan)
     temperature_data = temperature_data.replace('', np.nan)
+    temperature_data = temperature_data.replace('0',np.nan)
     temperature_data = temperature_data.fillna(method='ffill')
     temperature_data = temperature_data.fillna(method='bfill')
     temperature_data = temperature_data.astype(float)
@@ -170,6 +196,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for humidity
     humidity_data = humidity_data.replace('8888', np.nan)
     humidity_data = humidity_data.replace('', np.nan)
+    humidity_data = humidity_data.replace('0',np.nan)
     humidity_data = humidity_data.fillna(method='ffill')
     humidity_data = humidity_data.fillna(method='bfill')
     humidity_data = humidity_data.astype(float)
@@ -188,6 +215,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for wind
     wind_data = wind_data.replace('8888', np.nan)
     wind_data = wind_data.replace('', np.nan)
+    wind_data = wind_data.replace('0',np.nan)
     wind_data = wind_data.fillna(method='ffill')
     wind_data = wind_data.fillna(method='bfill')
     wind_data = wind_data.astype(float)
@@ -207,6 +235,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for rainfall
     rainfall_data = rainfall_data.replace('8888', np.nan)
     rainfall_data = rainfall_data.replace('', np.nan)
+    rainfall_data = rainfall_data.replace('0',np.nan)
     rainfall_data = rainfall_data.fillna(method='ffill')
     rainfall_data = rainfall_data.fillna(method='bfill')
     rainfall_data = rainfall_data.astype(float)
@@ -217,28 +246,49 @@ def dataProcessing(data, periods, start, end, freq='D'):
     rainfall_list = rainfall_data['Rainfall'].tolist()
 
     #Create new variable to implement grid search for all parameters
-    grid_temp = grid_search(temperature_data)
-    grid_humidity = grid_search(humidity_data)
-    grid_wind = grid_search(wind_data)
-    grid_rainfall = grid_search(rainfall_data)
+    # grid_temp = grid_search(temperature_data)
+    # grid_humidity = grid_search(humidity_data)
+    # grid_wind = grid_search(wind_data)
+    # grid_rainfall = grid_search(rainfall_data)
+    temp = Prediction(temperature_data,'additive', 'multiplicative', 12, 0.5, 0.1, 0.2)
+    humidity = Prediction(humidity_data,'additive', 'additive', 12, 0.1, 0.9, 0.5)
+    wind = Prediction(wind_data,'multiplicative', 'additive', 12, 0.9, 0.1,0.2)
+    rainfall = Prediction(rainfall_data,'additive', 'additive', 4, 0.9, 0.4,0.2 )
+    
+    def fuzzy(value):
+        result=[]
+        fwi = ctrl.Antecedent(np.arange(0, 20, 1), 'x') # type: ignore
+        fwi['biru'] = fuzz.trapmf(fwi.universe, [0, 0, 1, 2])
+        fwi['hijau'] = fuzz.trapmf(fwi.universe, [1, 2, 6, 7])
+        fwi['kuning'] = fuzz.trapmf(fwi.universe, [6, 7, 13,13])
+        fwi['merah'] = fuzz.trapmf(fwi.universe, [7,13,13,13])
+
+        fwi_level_biru = fuzz.interp_membership(fwi.universe, fwi['biru'].mf, value)
+        fwi_level_hijau = fuzz.interp_membership(fwi.universe, fwi['hijau'].mf, value)
+        fwi_level_kuning = fuzz.interp_membership(fwi.universe, fwi['kuning'].mf, value)
+        fwi_level_merah = fuzz.interp_membership(fwi.universe, fwi['merah'].mf, value)
+        print(fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah)
 
     #implement to calculate fwi from all parameters
-    fwi_values = calculate_fwi_list(grid_temp, grid_humidity, grid_wind, grid_rainfall)
+    fwi_values = calculate_fwi_list(temp, humidity, wind, rainfall)
+    for i in range(len(fwi_values)): 
+        fuzzy(fwi_values[i])
     
+   
     
     #hasil semua prediksi parameter
-    print("--------  TEMPERATURE  --------")
-    print(grid_temp)
-    print("--------  HUMIDITY  --------")
-    print(grid_humidity)
-    print("--------  WIND  --------")
-    print(grid_wind)
-    print("--------  RAINFALL  --------")
-    print(grid_rainfall)
+    # print("--------  TEMPERATURE  --------")
+    # print(grid_temp)
+    # print("--------  HUMIDITY  --------")
+    # print(grid_humidity)
+    # print("--------  WIND  --------")
+    # print(grid_wind)
+    # print("--------  RAINFALL  --------")
+    # print(grid_rainfall)
 
     #hasil prediksi fwi
-    print("--------  FWI  --------")
-    print(fwi_values)
+    # print("--------  FWI  --------")
+    # print(fwi_level_low,"test")
 
 
     response = {
@@ -274,4 +324,4 @@ def get_credentials():
     return dataProcessing(data, int(periods), start, end)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=3000)
