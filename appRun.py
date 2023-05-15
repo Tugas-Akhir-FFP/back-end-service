@@ -84,7 +84,7 @@ def grid_search(df):
     print(best_params)
     return predictions.tolist() 
 
-#create function for formula fwi calculation using 4 parameter
+#function fwi calculation formula
 def fwiCalculation(temperature, humidity, wind, rainfall):
     #calculate ffmc
     ffmc = 0.0 
@@ -226,7 +226,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     fwi_values = calculate_fwi_list(grid_temp, grid_humidity, grid_wind, grid_rainfall)
     
     
-    #hasil semua prediksi parameter
+    #hasil semua hasil grid search prediksi parameter
     print("--------  TEMPERATURE  --------")
     print(grid_temp)
     print("--------  HUMIDITY  --------")

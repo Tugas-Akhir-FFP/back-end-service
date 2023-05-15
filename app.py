@@ -29,7 +29,7 @@ param_grid = {'seasonal': ['additive', 'multiplicative'],
 
 def grid_search(df):
     print(len(df))
-    train, test = df[1700:1800], df[1800:1826]
+    train, test = df[1:200], df[200:210]
     results = []
     for seasonal in param_grid['seasonal']:
         for trend in param_grid['trend']:
@@ -51,7 +51,7 @@ def grid_search(df):
                                 r2 = r2_score(test, predictions)
                                 results.append((seasonal, trend, seasonal_period, smoothing_level, smoothing_trend, smoothing_seasonal, r2))
                             except:
-                                continue
+                                print('error')
     
     # Cari parameter yang menghasilkan r-square terbaik
     best_params = max(results, key=lambda x: x[-1])
@@ -63,40 +63,191 @@ def grid_search(df):
                           smoothing_trend=best_params[4], 
                           smoothing_seasonal=best_params[5])
     predictions = model_fit.forecast(len(test))
+
+    #change variable value using flatten
+    predictions = np.array(predictions).flatten().round(2)
+    test = np.array(test).flatten()
+
+    #error calculation
     r2 = r2_score(test, predictions)
-    mse = mean_squared_error(test, predictions)  
-    hasil = {};
-    hasil['Hasil'] = predictions.tolist()
+    mse = np.square(np.subtract(test,predictions)).mean()
+    rmse = math.sqrt(mse)
+    hasil = {}
+    hasil['Hasil'] = predictions.tolist()   
     print(r2,'r2')
     print(mse,'mse')
+    print(rmse,'rmse')
     print(test)
     print(best_params)
     return predictions.tolist() 
 
-def dataProcessing(data, periods, start, end): 
-    try:
-        data = data[1:]  # menghapus baris label kolom dari data
-        df = pd.DataFrame(data, columns=['Tanggal', 'Tavg', 'RH_avg', 'ff_avg', 'RR'])  # hanya memasukkan data
-        df = df.rename(columns={'Tanggal': 'Date', 'Tavg': 'Temperature',
-                                'RH_avg': 'Humidity', 'ff_avg': 'Wind', 'RR': 'Rainfall'})
-        df['Date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y', errors='coerce')
+def fwiCalculation(temperature, humidity, wind, rainfall):
+    #FFMC Calculation
+    ffmc = 0.0 
+    if temperature > -1.1 and temperature < 30.0 :
+        ffmc = (59.5 * (math.exp((temperature - 10.0) / -6.0))) - (14.0 * humidity) + (0.5 * wind) + 43.5
+        if ffmc < 0.0 :
+            ffmc = 0.0
+    elif temperature >= 30.0 :
+        ffmc = (122.0 * (math.exp((temperature - 10.0) / -6.0))) - (0.2 * (100.0 - humidity)) + (wind * 0.1) + 50.0
+        if ffmc > 101.0 :
+            ffmc = 101.0
 
-        # filter data within date range
-        df = df[(df['Date'] >= start) & (df['Date'] <= end)]
-        
-        # convert columns to float and fill missing values
-        df[['Temperature', 'Humidity', 'Wind', 'Rainfall']] = df[['Temperature', 'Humidity', 'Wind', 'Rainfall']].astype(float)
-        df[['Temperature', 'Humidity', 'Wind', 'Rainfall']] = df[['Temperature', 'Humidity', 'Wind', 'Rainfall']].fillna(method='ffill')
+    #DC Calculation
+    dc = (ffmc - 30.0) * 0.5 + 3.0 * (wind / 20.0)
 
-        # set Date as index and reindex with complete date range
-        df = df.set_index('Date')
-        df = df.reindex(index, fill_value=np.nan)
-        response = {}
-        response['Hasil'] = df['Temperature'].tolist()[-periods:]
+    #ISI Calculation
+    isi = 0.0 
+    if wind > 40.0 :
+        isi = 16.0
+    else :
+        isi = (wind / 4.0) * (math.exp(0.05039 * humidity)) * 0.01
 
-        return response
-    except Exception as e:
-        return {'error': str(e)}
+    #BUI Calculation
+    bui = 0.0
+    if dc <= 0.0 :
+        bui = 0.0
+    else :
+        bui = (dc / 10.0) * (0.5 + 0.3 * math.log10(rainfall + 1.0))
+
+    #FWI Calculation
+    fwi = 0.0
+    if bui <= 80.0 :
+        fwi = bui * 0.1 + isi * 0.4
+    else : 
+        fwi = bui * 0.6 + isi * 0.4
+
+    return fwi
+
+#Function to calculate FWI for list of data
+def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list):
+    fwi_list = []
+    for i in range(len(temperature_list)):
+        fwi = fwiCalculation(temperature_list[i], humidity_list[i], wind_list[i], rainfall_list[i])
+        fwi_list.append(fwi)
+    return fwi_list
+
+def dataProcessing(data, periods, start, end, freq='D'): 
+    index = pd.date_range(start, end, freq=freq)
+    df = pd.DataFrame(data)
+    df.columns = df.iloc[0]
+    df = df[:-periods]
+    df = df.rename(columns={'Tanggal':'Date','Tavg':'Temperature','RH_avg':'Humidity','ff_avg':'Wind','RR':'Rainfall'})
+    
+    #filter data by range date start and end
+    df = df.drop(df.index[0]) 
+    df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
+    df_filtered = df[df['Date'].between(start, end)]
+    
+    
+    # select temperature data
+    temperature_data = df_filtered[['Date', 'Temperature']]
+    temperature_data = temperature_data.set_index('Date')
+    temperature_list = temperature_data['Temperature'].tolist()
+    date_list = df_filtered['Date'].tolist()
+
+    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for temperature
+    temperature_data = temperature_data.replace('8888', np.nan)
+    temperature_data = temperature_data.replace('', np.nan)
+    temperature_data = temperature_data.fillna(method='ffill')
+    temperature_data = temperature_data.fillna(method='bfill')
+    temperature_data = temperature_data.astype(float)
+    temperature_data = temperature_data.reset_index()
+    temperature_data = temperature_data.set_index('Date')
+    temperature_data = temperature_data.resample('D').mean()
+    #return to list
+    temperature_list = temperature_data['Temperature'].tolist()
+
+    # Select humidity data
+    humidity_data = df_filtered[['Date', 'Humidity']]
+    humidity_data = humidity_data.set_index('Date')
+    humidity_list = humidity_data['Humidity'].tolist()
+    date_list = df_filtered['Date'].tolist()
+
+    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for humidity
+    humidity_data = humidity_data.replace('8888', np.nan)
+    humidity_data = humidity_data.replace('', np.nan)
+    humidity_data = humidity_data.fillna(method='ffill')
+    humidity_data = humidity_data.fillna(method='bfill')
+    humidity_data = humidity_data.astype(float)
+    humidity_data = humidity_data.reset_index()
+    humidity_data = humidity_data.set_index('Date')
+    humidity_data = humidity_data.resample('D').mean()
+    #return to list
+    humidity_list = humidity_data['Humidity'].tolist()
+
+    # Select wind data
+    wind_data = df_filtered[['Date', 'Wind']]
+    wind_data = wind_data.set_index('Date')
+    wind_list = wind_data['Wind'].tolist()
+    date_list = df_filtered['Date'].tolist()
+
+    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for wind
+    wind_data = wind_data.replace('8888', np.nan)
+    wind_data = wind_data.replace('', np.nan)
+    wind_data = wind_data.fillna(method='ffill')
+    wind_data = wind_data.fillna(method='bfill')
+    wind_data = wind_data.astype(float)
+    wind_data = wind_data.reset_index()
+    wind_data = wind_data.set_index('Date')
+    wind_data = wind_data.resample('D').mean()
+    #return to list
+    wind_list = wind_data['Wind'].tolist()
+
+
+    # Select rainfall data
+    rainfall_data = df_filtered[['Date', 'Rainfall']]
+    rainfall_data = rainfall_data.set_index('Date')
+    rainfall_list = rainfall_data['Rainfall'].tolist()
+    date_list = df_filtered['Date'].tolist()
+
+    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for rainfall
+    rainfall_data = rainfall_data.replace('8888', np.nan)
+    rainfall_data = rainfall_data.replace('', np.nan)
+    rainfall_data = rainfall_data.fillna(method='ffill')
+    rainfall_data = rainfall_data.fillna(method='bfill')
+    rainfall_data = rainfall_data.astype(float)
+    rainfall_data = rainfall_data.reset_index()
+    rainfall_data = rainfall_data.set_index('Date')
+    rainfall_data = rainfall_data.resample('D').mean()
+    #return to list
+    rainfall_list = rainfall_data['Rainfall'].tolist()
+
+    #Create new variable to implement grid search for all parameters
+    grid_temp = grid_search(temperature_data)
+    grid_humidity = grid_search(humidity_data)
+    grid_wind = grid_search(wind_data)
+    grid_rainfall = grid_search(rainfall_data)
+
+    #implement to calculate fwi from all parameters
+    fwi_values = calculate_fwi_list(grid_temp, grid_humidity, grid_wind, grid_rainfall)
+    
+    
+    #hasil semua hasil grid search prediksi parameter
+    print("--------  TEMPERATURE  --------")
+    print(grid_temp)
+    print("--------  HUMIDITY  --------")
+    print(grid_humidity)
+    print("--------  WIND  --------")
+    print(grid_wind)
+    print("--------  RAINFALL  --------")
+    print(grid_rainfall)
+
+    #hasil prediksi fwi
+    print("--------  FWI  --------")
+    print(fwi_values)
+
+
+    response = {
+        'Date' : date_list,
+        'Temperature' : temperature_list,
+        'Humidity' : humidity_list,
+        'Wind' : wind_list,
+        'Rainfall' : rainfall_list
+    }
+
+    return response
+
 # Riau-Kab.Kampar_2015-2019
 # Data Harian - Table   
 @app.route('/api')
@@ -116,4 +267,4 @@ def get_credentials():
     return dataProcessing(data, int(periods), start, end)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run()
