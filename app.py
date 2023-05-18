@@ -117,7 +117,17 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
     else : 
         fwi = bui * 0.6 + isi * 0.4
 
-    return fwi
+    result  = {
+        'ffmc' : ffmc,
+        'dc' : dc,
+        'isi' : isi,
+        'bui' : bui,
+        'fwi' : fwi
+    }
+
+    json_result = json.dumps(result)
+
+    return json_result
 
 #Function to calculate FWI for list of data
 def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list):
@@ -246,7 +256,8 @@ def dataProcessing(data, periods, start, end, freq='D'):
         'Rainfall' : rainfall_list
     }
 
-    return response
+    json_response = json.dumps(response)
+    return json_response
 
 # Riau-Kab.Kampar_2015-2019
 # Data Harian - Table   
