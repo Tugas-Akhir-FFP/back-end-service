@@ -242,12 +242,19 @@ def dataProcessing(data, periods, start, end, freq='D'):
 
 
     response = {
-        'Date' : date_list,
-        'Temperature' : temperature_list,
-        'Humidity' : humidity_list,
-        'Wind' : wind_list,
-        'Rainfall' : rainfall_list
+        'Parameter' : [],
+        'Fwi Result' : fwi_values
     }
+    for i in range(len(date_list)):
+        data = {
+            'Date': date_list[i],
+            'Temperature': temperature_list[i],
+            'Humidity': humidity_list[i],
+            'Wind': wind_list[i],
+            'Rainfall': rainfall_list[i],
+        }
+        
+        response['Parameter'].append(data)
 
     return response
 

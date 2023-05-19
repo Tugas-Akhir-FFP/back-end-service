@@ -15,17 +15,19 @@ from statsmodels.tsa.api import ExponentialSmoothing
 from sklearn.metrics import r2_score
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from waitress import serve
+import skfuzzy as fuzz 
+from skfuzzy import control as ctrl
 
 app = Flask(__name__)
 api = Api(app)
 CORS(app)
 
 param_grid = {'seasonal': ['additive', 'multiplicative'],
-              'trend': ['additive', 'multiplicative'],
-              'seasonal_periods': [4, 12],
-              'smoothing_level': np.linspace(0.1, 0.9, 9),
-              'smoothing_trend': np.linspace(0.1, 0.9, 9),
-              'smoothing_seasonal': np.linspace(0.1, 0.9, 9)}
+            'trend': ['additive', 'multiplicative'],
+            'seasonal_periods': [4, 12],
+            'smoothing_level': np.linspace(0.1, 0.9, 9),
+            'smoothing_trend': np.linspace(0.1, 0.9, 9),
+            'smoothing_seasonal': np.linspace(0.1, 0.9, 9)}
 
 def grid_search(df):
     print(len(df))
@@ -63,26 +65,53 @@ def grid_search(df):
                           smoothing_trend=best_params[4], 
                           smoothing_seasonal=best_params[5])
     predictions = model_fit.forecast(len(test))
-
-    #change variable value using flatten
-    predictions = np.array(predictions).flatten().round(2)
+    #change prediction value round to 2 decimal
+    predictions = np.array(predictions).flatten().round(0)
     test = np.array(test).flatten()
 
-    #error calculation
+    #print type of data test
+    print(type(test))
+    print(type(predictions))
     r2 = r2_score(test, predictions)
+    # mse = mean_squared_error(test, predictions)  
     mse = np.square(np.subtract(test,predictions)).mean()
     rmse = math.sqrt(mse)
+    print(np.array(test))
     hasil = {}
     hasil['Hasil'] = predictions.tolist()   
     print(r2,'r2')
     print(mse,'mse')
     print(rmse,'rmse')
+    print(best_params,"best param")
+    print(predictions)
+    
     print(test)
-    print(best_params)
     return predictions.tolist() 
 
+
+
+def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal):
+    train, test = df[1:200], df[200:210]
+    model = ExponentialSmoothing(train,
+                                seasonal=seasonal,
+                                trend=trend,
+                                seasonal_periods=periods)
+    model_fit = model.fit(smoothing_level=slevel, 
+                        smoothing_trend=stren, 
+                        smoothing_seasonal=sseasonal)
+    predictions = model_fit.forecast(len(test))
+    predictions = np.array(predictions).flatten().round(2)
+    test = np.array(test).flatten()
+    mse = np.square(np.subtract(test,predictions)).mean()
+    r2 = r2_score(test, predictions)
+    rmse = math.sqrt(mse)
+    value = []
+    value.append((mse,rmse,r2))
+    print(value)
+    return predictions.tolist()
+#create function for formula fwi calculation using 4 parameter
 def fwiCalculation(temperature, humidity, wind, rainfall):
-    #FFMC Calculation
+    #calculate ffmc
     ffmc = 0.0 
     if temperature > -1.1 and temperature < 30.0 :
         ffmc = (59.5 * (math.exp((temperature - 10.0) / -6.0))) - (14.0 * humidity) + (0.5 * wind) + 43.5
@@ -93,43 +122,32 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
         if ffmc > 101.0 :
             ffmc = 101.0
 
-    #DC Calculation
+    #calculate DC
     dc = (ffmc - 30.0) * 0.5 + 3.0 * (wind / 20.0)
 
-    #ISI Calculation
+    #calculate ISI
     isi = 0.0 
     if wind > 40.0 :
         isi = 16.0
     else :
         isi = (wind / 4.0) * (math.exp(0.05039 * humidity)) * 0.01
 
-    #BUI Calculation
+    #calculate BUI
     bui = 0.0
     if dc <= 0.0 :
         bui = 0.0
     else :
         bui = (dc / 10.0) * (0.5 + 0.3 * math.log10(rainfall + 1.0))
 
-    #FWI Calculation
+    #calculate FWI
     fwi = 0.0
     if bui <= 80.0 :
         fwi = bui * 0.1 + isi * 0.4
     else : 
         fwi = bui * 0.6 + isi * 0.4
 
-    result  = {
-        'ffmc' : ffmc,
-        'dc' : dc,
-        'isi' : isi,
-        'bui' : bui,
-        'fwi' : fwi
-    }
+    return fwi
 
-    json_result = json.dumps(result)
-
-    return json_result
-
-#Function to calculate FWI for list of data
 def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list):
     fwi_list = []
     for i in range(len(temperature_list)):
@@ -159,6 +177,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for temperature
     temperature_data = temperature_data.replace('8888', np.nan)
     temperature_data = temperature_data.replace('', np.nan)
+    temperature_data = temperature_data.replace('0',np.nan)
     temperature_data = temperature_data.fillna(method='ffill')
     temperature_data = temperature_data.fillna(method='bfill')
     temperature_data = temperature_data.astype(float)
@@ -177,6 +196,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for humidity
     humidity_data = humidity_data.replace('8888', np.nan)
     humidity_data = humidity_data.replace('', np.nan)
+    humidity_data = humidity_data.replace('0',np.nan)
     humidity_data = humidity_data.fillna(method='ffill')
     humidity_data = humidity_data.fillna(method='bfill')
     humidity_data = humidity_data.astype(float)
@@ -195,6 +215,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for wind
     wind_data = wind_data.replace('8888', np.nan)
     wind_data = wind_data.replace('', np.nan)
+    wind_data = wind_data.replace('0',np.nan)
     wind_data = wind_data.fillna(method='ffill')
     wind_data = wind_data.fillna(method='bfill')
     wind_data = wind_data.astype(float)
@@ -214,6 +235,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for rainfall
     rainfall_data = rainfall_data.replace('8888', np.nan)
     rainfall_data = rainfall_data.replace('', np.nan)
+    rainfall_data = rainfall_data.replace('0',np.nan)
     rainfall_data = rainfall_data.fillna(method='ffill')
     rainfall_data = rainfall_data.fillna(method='bfill')
     rainfall_data = rainfall_data.astype(float)
@@ -224,43 +246,60 @@ def dataProcessing(data, periods, start, end, freq='D'):
     rainfall_list = rainfall_data['Rainfall'].tolist()
 
     #Create new variable to implement grid search for all parameters
-    grid_temp = grid_search(temperature_data)
-    grid_humidity = grid_search(humidity_data)
-    grid_wind = grid_search(wind_data)
-    grid_rainfall = grid_search(rainfall_data)
+    # grid_temp = grid_search(temperature_data)
+    # grid_humidity = grid_search(humidity_data)
+    # grid_wind = grid_search(wind_data)
+    # grid_rainfall = grid_search(rainfall_data)
+    temp = Prediction(temperature_data,'additive', 'multiplicative', 12, 0.5, 0.1, 0.2)
+    humidity = Prediction(humidity_data,'additive', 'additive', 12, 0.1, 0.9, 0.5)
+    wind = Prediction(wind_data,'multiplicative', 'additive', 12, 0.9, 0.1,0.2)
+    rainfall = Prediction(rainfall_data,'additive', 'additive', 4, 0.9, 0.4,0.2 )
+    
+
+    #Fuzzy Universe
+    def fuzzy(value):
+        result=[]
+        fwi = ctrl.Antecedent(np.arange(0, 20, 1), 'x') # type: ignore
+        fwi['biru'] = fuzz.trapmf(fwi.universe, [0, 0, 1, 2])
+        fwi['hijau'] = fuzz.trapmf(fwi.universe, [1, 2, 6, 7])
+        fwi['kuning'] = fuzz.trapmf(fwi.universe, [6, 7, 13,13])
+        fwi['merah'] = fuzz.trapmf(fwi.universe, [7,13,13,13])
+
+        fwi_level_biru = fuzz.interp_membership(fwi.universe, fwi['biru'].mf, value)
+        fwi_level_hijau = fuzz.interp_membership(fwi.universe, fwi['hijau'].mf, value)
+        fwi_level_kuning = fuzz.interp_membership(fwi.universe, fwi['kuning'].mf, value)
+        fwi_level_merah = fuzz.interp_membership(fwi.universe, fwi['merah'].mf, value)
+        result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah]
+        return result
 
     #implement to calculate fwi from all parameters
-    fwi_values = calculate_fwi_list(grid_temp, grid_humidity, grid_wind, grid_rainfall)
+    fwi_values = calculate_fwi_list(temp, humidity, wind, rainfall)
+    fuzzy_result = []
+    for i in range(len(fwi_values)): 
+        result = fuzzy(fwi_values[i])
+        fuzzy_result.append({'Data' : fwi_values[i], 'Fuzzy' : result})
     
-    
-    #hasil semua hasil grid search prediksi parameter
-    print("--------  TEMPERATURE  --------")
-    print(grid_temp)
-    print("--------  HUMIDITY  --------")
-    print(grid_humidity)
-    print("--------  WIND  --------")
-    print(grid_wind)
-    print("--------  RAINFALL  --------")
-    print(grid_rainfall)
-
-    #hasil prediksi fwi
-    print("--------  FWI  --------")
-    print(fwi_values)
-
-
     response = {
-        'Date' : date_list,
-        'Temperature' : temperature_list,
-        'Humidity' : humidity_list,
-        'Wind' : wind_list,
-        'Rainfall' : rainfall_list
+        'Fuzzy Result' : fuzzy_result,
+        'Parameter' : [],
+        'Fwi Result' : fwi_values
     }
+    for i in range(len(date_list)):
+        data = {
+            'Date': date_list[i],
+            'Temperature': temperature_list[i],
+            'Humidity': humidity_list[i],
+            'Wind': wind_list[i],
+            'Rainfall': rainfall_list[i],
+        }
+        
+        response['Parameter'].append(data)
 
-    json_response = json.dumps(response)
-    return json_response
+    json_data = json.dumps(response, indent=4)
+    return json_data
 
-# Riau-Kab.Kampar_2015-2019
-# Data Harian - Table   
+
+
 @app.route('/api')
 def get_credentials():
     sheetName = request.args.get('sheetName')
@@ -270,12 +309,13 @@ def get_credentials():
     end = request.args.get('end')
     
     scope_app =['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive'] 
-    cred = ServiceAccountCredentials.from_json_keyfile_name('token.json',scope_app) 
+    cred = ServiceAccountCredentials.from_json_keyfile_name('token.json',scope_app)  # type: ignore
     client = gspread.authorize(cred)
     sheet = client.open(sheetName)
     worksheet = sheet.worksheet(worksheetName)
     data = worksheet.get_all_values()
-    return dataProcessing(data, int(periods), start, end)
+
+    return dataProcessing(data, int(periods), start, end)# type: ignore
 
 if __name__ == '__main__':
     app.run()
