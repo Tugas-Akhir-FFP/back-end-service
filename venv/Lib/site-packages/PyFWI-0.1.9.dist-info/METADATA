@@ -1,0 +1,69 @@
+Metadata-Version: 2.1
+Name: PyFWI
+Version: 0.1.9
+Summary: PyFWI is a Pyhton package for seismic FWI and reservoir monitoring
+Home-page: https://github.com/AmirMardan/PyFWI
+Author: Amir Mardan
+Author-email: mardan.amir.h@gmail.com
+Project-URL: Bug Tracker, https://github.com/AmirMardan/PyFWI/issues
+Classifier: Intended Audience :: Education
+Classifier: Programming Language :: C
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.10
+Classifier: License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)
+Classifier: Operating System :: OS Independent
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Intended Audience :: Education
+Classifier: Intended Audience :: Science/Research
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: setuptools (>=42)
+Requires-Dist: wheel
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Requires-Dist: scipy
+Requires-Dist: hdf5storage
+Requires-Dist: requests
+Requires-Dist: datetime
+
+# PyFWI
+[![PyPI version](https://badge.fury.io/py/PyFWI.svg)](https://badge.fury.io/py/PyFWI)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Documentation Status](https://readthedocs.org/projects/pyfwi/badge/?version=latest)](https://pyfwi.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://zenodo.org/badge/402170735.svg)](https://zenodo.org/badge/latestdoi/402170735)
+[![Downloads](https://static.pepy.tech/personalized-badge/pyfwi?period=total&units=none&left_color=grey&right_color=green&left_text=Downloads)](https://pepy.tech/project/pyfwi)
+<img src="https://visitor-badge.laobi.icu/badge?page_id=pyfwi_unique12.pyfwi_unique12"/>
+
+This repository contains Python package for elastic seismic full-waveform inversion (FWI) and time-lapse FWI.
+
+
+## Installation
+To install this package, run 
+```
+python3 -m pip install PyFWI
+```
+on macOS or 
+```
+py -m pip install PyFWI
+```
+on Windows.
+
+The structure of PyFWI can be shown as
+
+![PyFWI_structure](docs/pyfwi_structure.png)
+
+## Citing PyFWI
+```
+@software{PyFWI,
+  author       = {Mardan Amir and
+                  Bernard Giroux and
+                  Gabriel Fabien-Ouellet},
+  title        = {{PyFWI}: A {Python} package for full-waveform inversion and reservoir monitoring,
+  month        = Jan,
+  year         = 2022,
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.5813637},
+  url          = {https://doi.org/10.5281/zenodo.5813637}
+}
+```

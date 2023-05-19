@@ -30,8 +30,7 @@ param_grid = {'seasonal': ['additive', 'multiplicative'],
             'smoothing_seasonal': np.linspace(0.1, 0.9, 9)}
 
 def grid_search(df):
-    print(len(df))
-    train, test = df[1:200], df[200:210]
+    train, test = df[1:1577], df[1577:1587]
     results = []
     for seasonal in param_grid['seasonal']:
         for trend in param_grid['trend']:
@@ -66,7 +65,7 @@ def grid_search(df):
                           smoothing_seasonal=best_params[5])
     predictions = model_fit.forecast(len(test))
     #change prediction value round to 2 decimal
-    predictions = np.array(predictions).flatten().round(0)
+    predictions = np.array(predictions).flatten().round(1)
     test = np.array(test).flatten()
 
     #print type of data test
@@ -83,14 +82,15 @@ def grid_search(df):
     print(mse,'mse')
     print(rmse,'rmse')
     print(best_params,"best param")
-    print(predictions)
+    print(predictions,"preduction")
     
-    print(test)
+    print(test,"test")
     return predictions.tolist() 
 
 
 
 def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal):
+    print(len(df),"panjang", df.tail())
     train, test = df[1:200], df[200:210]
     model = ExponentialSmoothing(train,
                                 seasonal=seasonal,
@@ -107,9 +107,37 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal):
     rmse = math.sqrt(mse)
     value = []
     value.append((mse,rmse,r2))
-    print(value)
+    print(value,"value")
     return predictions.tolist()
 #create function for formula fwi calculation using 4 parameter
+def fwiCalculation2(temperature, humidity, wind, rainfall):
+    # give me the formula for fwi diffrent with fwiCalculation with 4 parameter
+    #temperature dengan satuan celcius, humidity dengan satuan %, wind dengan satuan m/s, rainfall dengan satuan mm
+    FFMC_old = 85.0
+    DMC_old = 6.0
+    DC_old = 15.0
+
+    # Calculate FFMC
+    FFMC_new = (FFMC_old + 0.0278 * DMC_old * math.exp(0.0385 * (temperature - 20.0))) * (1.0 - math.exp(-0.1 * humidity))
+
+    # Calculate DMC
+    DMC_new = (DMC_old + 0.1 * rainfall) * math.exp(0.1 * (temperature - 20.0))
+
+    # Calculate DC
+    DC_new = (DC_old + 1.5 * (rainfall - 1.5)) * math.exp(0.023 * (temperature - 20.0))
+
+    # Calculate ISI
+    ISI = 0.4 * wind
+
+    # Calculate BUI
+    BUI = 0.5 * (DMC_new + DC_new) / (10.0 - 0.1 * rainfall)
+
+    # Calculate FWI
+    FWI = (ISI + BUI) / 2.0
+
+    return FWI
+
+
 def fwiCalculation(temperature, humidity, wind, rainfall):
     #calculate ffmc
     ffmc = 0.0 
@@ -151,7 +179,7 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
 def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list):
     fwi_list = []
     for i in range(len(temperature_list)):
-        fwi = fwiCalculation(temperature_list[i], humidity_list[i], wind_list[i], rainfall_list[i])
+        fwi = fwiCalculation2(temperature_list[i], humidity_list[i], wind_list[i], rainfall_list[i])
         fwi_list.append(fwi)
     return fwi_list
 
@@ -160,7 +188,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     df = pd.DataFrame(data)
     df.columns = df.iloc[0]
     df = df[:-periods]
-    df = df.rename(columns={'Tanggal':'Date','Tavg':'Temperature','RH_avg':'Humidity','ff_avg':'Wind','RR':'Rainfall'})
+    df = df.rename(columns={'Tanggal':'Date','Tx':'Temperature','RH_avg':'Humidity','ff_avg':'Wind','RR':'Rainfall'})
     
     #filter data by range date start and end
     df = df.drop(df.index[0]) 
@@ -241,6 +269,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     rainfall_data = rainfall_data.astype(float)
     rainfall_data = rainfall_data.reset_index()
     rainfall_data = rainfall_data.set_index('Date')
+    # give rainfall to modus
     rainfall_data = rainfall_data.resample('D').mean()
     #return to list
     rainfall_list = rainfall_data['Rainfall'].tolist()
@@ -250,10 +279,14 @@ def dataProcessing(data, periods, start, end, freq='D'):
     # grid_humidity = grid_search(humidity_data)
     # grid_wind = grid_search(wind_data)
     # grid_rainfall = grid_search(rainfall_data)
-    temp = Prediction(temperature_data,'additive', 'multiplicative', 12, 0.5, 0.1, 0.2)
-    humidity = Prediction(humidity_data,'additive', 'additive', 12, 0.1, 0.9, 0.5)
-    wind = Prediction(wind_data,'multiplicative', 'additive', 12, 0.9, 0.1,0.2)
-    rainfall = Prediction(rainfall_data,'additive', 'additive', 4, 0.9, 0.4,0.2 )
+    temp = Prediction(temperature_data,'additive', 'additive', 12, 0.2, 0.6, 0.2)
+    humidity = Prediction(humidity_data,'additive', 'additive', 12, 0.2, 0.6, 0.2)
+    wind = Prediction(wind_data,'multiplicative', 'multiplicative', 4, 0.7, 0.8,0.4)
+    rainfall = Prediction(rainfall_data,'multiplicative', 'multiplicative', 4, 0.4, 0.1,0.9 )
+    print(temp,"temp")
+    print(humidity,"humidity")
+    print(wind,"wind")
+    print(rainfall,"rainfall")
     
     def fuzzy(value):
         result=[]
@@ -273,6 +306,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
     fwi_values = calculate_fwi_list(temp, humidity, wind, rainfall)
     for i in range(len(fwi_values)): 
         fuzzy(fwi_values[i])
+        print(fwi_values[i],"fwi_values")
     
    
     
