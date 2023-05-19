@@ -303,9 +303,6 @@ def dataProcessing(data, periods, start, end, freq='D'):
 
 
 
-  
-# Riau-Kab.Kampar_2015-2019
-# Data Harian - Table   
 @app.route('/api')
 def get_credentials():
     sheetName = request.args.get('sheetName')
@@ -315,13 +312,13 @@ def get_credentials():
     end = request.args.get('end')
     
     scope_app =['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive'] 
-    cred = ServiceAccountCredentials.from_json_keyfile_name('token.json',scope_app) 
+    cred = ServiceAccountCredentials.from_json_keyfile_name('token.json',scope_app)  # type: ignore
     client = gspread.authorize(cred)
     sheet = client.open(sheetName)
     worksheet = sheet.worksheet(worksheetName)
     data = worksheet.get_all_values()
 
-    return dataProcessing(data, int(periods), start, end)
+    return dataProcessing(data, int(periods), start, end)# type: ignore
 
 if __name__ == '__main__':
     app.run(debug=True, port=3000)
