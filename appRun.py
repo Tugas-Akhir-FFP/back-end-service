@@ -118,25 +118,34 @@ def fwiCalculation2(temperature, humidity, wind, rainfall):
     DC_old = 15.0
 
     # Calculate FFMC
-    FFMC_new = (FFMC_old + 0.0278 * DMC_old * math.exp(0.0385 * (temperature - 20.0))) * (1.0 - math.exp(-0.1 * humidity))
+    mr_old = 147.2 * (101.0 - FFMC_old) / (59.5 + FFMC_old)
+    if(rainfall>0.5):
+        Pf = rainfall - 0.5
+    else :
+        Pf = 0.0
+    if(mr_old<=150):
+        mrt = mr_old + 42.5*Pf*math.exp(-100.0/(251.0-mr_old))*(1.0-math.exp(-6.93/Pf))
+    else:
+        mrt = mr_old + 42.5*Pf*math.exp(-100.0/(251.0-mr_old))*(1.0-math.exp(-6.93/Pf)) + 0.0015*(mr_old-150.0)**2*math.sqrt(Pf)
+    
+    if (mrt>250.0):
+        mrt = 250.0
+    Ed = 0.942*humidity**0.679 + (11.0*math.exp((humidity-100.0)/10.0)) + 0.18*(21.1-temperature)*(1.0-math.exp(-0.115*humidity))
+    m = 0
+    if(Ed < mr_old):
+        Ko = 0.424*(1-(humidity/100.0)**1.7) + (0.0694*math.sqrt(wind))*(1-(humidity/100.0)**8)
+        Kd = Ko*(0.581*math.exp(0.0365*temperature))
+        m = Ed + (mr_old - Ed)*10**(1/Kd)
+    else:
+        Ew = 0.618*humidity**0.753 + (10.0*math.exp((humidity-100.0)/10.0)) + 0.18*(21.1-temperature)*(1.0-math.exp(-0.115*humidity))
+        if(Ew>mr_old):
+            K1 = 0.424*(1-(humidity/100.0)**1.7) + (0.0694*math.sqrt(wind))*(1-(humidity/100.0)**8)
+            Kw = K1*(0.581*math.exp(0.0365*temperature))
+            m = Ew - (Ew - mr_old)/10**(Kw)
+            if(Ew<=mr_old):
+                m = Ew
 
-    # Calculate DMC
-    DMC_new = (DMC_old + 0.1 * rainfall) * math.exp(0.1 * (temperature - 20.0))
-
-    # Calculate DC
-    DC_new = (DC_old + 1.5 * (rainfall - 1.5)) * math.exp(0.023 * (temperature - 20.0))
-
-    # Calculate ISI
-    ISI = 0.4 * wind
-
-    # Calculate BUI
-    BUI = 0.5 * (DMC_new + DC_new) / (10.0 - 0.1 * rainfall)
-
-    # Calculate FWI
-    FWI = (ISI + BUI) / 2.0
-
-    return FWI
-
+    FFMC = 59.5*(250.0-m)/(147.2+m)
 
 def fwiCalculation(temperature, humidity, wind, rainfall):
     #calculate ffmc
