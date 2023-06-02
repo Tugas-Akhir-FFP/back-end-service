@@ -13,15 +13,10 @@ import math
 import numpy as np
 from statsmodels.tsa.api import ExponentialSmoothing
 from sklearn.metrics import r2_score
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-from waitress import serve
 import skfuzzy as fuzz 
 from skfuzzy import control as ctrl
-import cmath
 import decimal
-from sklearn.model_selection import GridSearchCV
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from joblib import Parallel, delayed
+from statsmodels.tsa.holtwinters import ExponentialSmoothing 
 
 app = Flask(__name__)
 api = Api(app)
@@ -35,10 +30,10 @@ param_grid = {'seasonal': ['additive', 'multiplicative', None],
             'smoothing_seasonal': np.linspace(0.1, 0.9, 9)}
 
 def grid_search(df):
-    print(len(df))
+    print(len(df),"panjang data")
     #Kotawaringin df[1:1451], df[1451:1471]
-    #Sidoarjo df[1:2439], df[2439:2459]
-    train, test = df[1:1471], df[1451:1471]
+    #Sidoarjo df[1:2439], df[2439:2459]wewewew
+    train, test = df[1:1451], df[1451:1471]
     print(len(train))
     print(len(test))
 
@@ -287,20 +282,19 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
     ### FFMC AREA
 
     ## Calculate FFMC 
-    mrprev = 147.2 * (101 - prev_ffmc / 59.5 + prev_ffmc)
+    mrprev = 147.2 * ((101 - prev_ffmc) / (59.5 + prev_ffmc))
 
     ## Calculate pF
     if rainfall <= 0.5 :
         pF =  rainfall - 0.5
     else :
         pF = rainfall
-    print(pF,"pf")
     ## Calculate Mrt
     if mrprev <= 150 :
-        Mrt = mrprev + 42.5 * pF * math.exp((-100/(251-mrprev))) * (1 - math.exp(-6.93/pF))
+        Mrt = mrprev + 42.5 * pF * math.exp((251-mrprev)/100) * (1 - math.exp(pF/6.93))
     elif mrprev > 150 :
-        term1 = 42.5 * pF * math.exp((-100/(251 - mrprev))) * (1 - math.exp(-6.93/pF ))
-        term2 = 0.0015 * (mrprev - 150) ** 2 * cmath.sqrt(pF)
+        term1 = 42.5 * pF * math.exp((251 - mrprev)/100) * (1 - math.exp(pF/6.93))
+        term2 = 0.0015 * ((mrprev - 150) ** 2) * (math.sqrt(pF))
         if (251 - mrprev) / 100 < 0:
             Mrt = mrprev
         else:
@@ -308,15 +302,15 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
         # Mrt = mrprev + 42.5 * pF * math.exp((251 - mrprev) / 100) * (1 - math.exp( pF / 6.93)) + 0.0015 * (mrprev - 150) ** 2 * math.sqrt(pF)
 
     ## Calculate Ed
-    Ed = 0.942 * (humidity ** 0.679) + (11 * math.exp((humidity - 100) / 10)) + 0.18 * (21.1 - temperature) * (1 - math.exp(-0.115 * humidity))
+    Ed = 0.942 * (humidity ** 0.679) + (11 * math.exp((humidity - 100) / 10)) + 0.18 * (21.1 - temperature) * (1 - math.exp(1/(0.115 * humidity)))
 
     ## Calculate Kd
     m = 0.0
     if Ed <= mrprev : 
         Ko = 0.424 * (1 - (humidity/ 100) ** 1.7) + (0.0694 * math.sqrt(wind)) * (1 - ((humidity) / 100) ** 8)
         Kd = Ko * (0.581 * math.exp(0.0365 * temperature))
-        m = Ed + (mrprev - Ed ) * 10 ** (-Kd)
-    
+        m = Ed + (mrprev - Ed ) * 10 ** (1/Kd)
+        print(m,"m KD")
     ## Calculate Ew
     else :
         Ew = 0.618 * (humidity ** 0.753) + (10 * math.exp((humidity - 100) / 10)) + 0.18 * (21.1 - temperature) * (1 - math.exp(-0.115 * humidity))
@@ -326,11 +320,13 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
             K1 = 0.424 * (1 - ((100-humidity / 100) ** 1.7)) + (0.0694 * math.sqrt(wind)) * (1 - ((100-humidity / 100) ** 8))
             Kw = K1 * (0.581 * math.exp(0.0365 * temperature))
             m = Ew - (Ew - mrprev) * 10 ** (1/Kw)
+            print(m,"m Ewe")
             if Ew <= mrprev <= Ed :
                 m = mrprev
-    
+                print(m,"m Ew")
     ## Calculate FFMC
-    FFMC = 59.5 * (250 - m / 147.2 + m)
+    FFMC = 59.5 * ((250 - m )/ (147.2 + m))
+    print(m,"maaaaaaaaaaaaaaaaaaaaaaaaaa")
 
 
 
@@ -404,19 +400,17 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
 
 
     ### ISI AREA
-    decimal.getcontext().prec = 28
+    decimal.getcontext().prec = 2
     ## Calculate m
-    m = 147.2 * (101 - FFMC / 59.5 + FFMC)
-    print(m,"m")
+    m = 147.2 * ((101 - FFMC) / (59.5 + FFMC))
     ## Calculate fU 
     fU = math.exp(0.05039 * wind)
     print("----- fU ----")
     print(fU)
-
     ## Calculate fF
-    fF = (91.9 * math.exp(-0.1386 * m) * (1 + (m ** 5.31/ (4.93 * 10**(7)))))
-    print("----- fF ----")
-    print(decimal.Decimal(math.exp(decimal.Decimal(-0.1386) * decimal.Decimal(m))),"exp")
+    # fF = (91.9 * math.exp(1/ (0.1386 * m)) * (1 + (m ** 5.31/ 4.93 * 10**(7))))
+    tes = 1 + ((m ** 5.31)/ (4.93 * (10**(7))))
+    fF = 91.9*math.exp(1/(0.1386*m))*tes
 
     ## Calculate ISI
     ISI = 0.208 * fU * fF
@@ -430,7 +424,7 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
     else :
         BUI = DMC - (1 - (0.8 * DC / (DMC + 0.4 * DC))) * (0.92 + (0.0114 * DMC) ** 1.7)
     
-
+    print(BUI,"BUI")
     ### FWI AREA
     ## Calculate fD 
     if BUI <= 80 :
@@ -439,12 +433,12 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
         fD = 1000 / (25 + 108.64 * math.exp(-0.023 * BUI))
     print(fD)
     ## Calculate BScale
-    BScale = 0.1 * ISI * fD
+    BScale = abs(0.1 * ISI * fD)
     print(BScale, "BScale")
     ## Calculate FWI
     FWI = 0.0
     if BScale > 1 :
-        FWI = math.exp(2.72 * (0.434 * math.log(BScale)) ** 0.647)
+        FWI = math.exp(2.72 * (0.434 * (math.log(BScale)) ** 0.647))
         print(FWI, "FWI1")
     elif BScale <= 1 :
         FWI = BScale
@@ -616,19 +610,28 @@ def dataProcessing(data, periods, start, end, freq='D'):
 
 
     #Fuzzy Universe
+    def custom_membership(x):
+        if x > 13:
+            return 1
+        else:
+            return 0
     def fuzzy(value):
         result=[]
-        fwi = ctrl.Antecedent(np.arange(0, 20, 1), 'x') # type: ignore
+        fwi = ctrl.Antecedent(np.arange(0, 20, 1), 'x') # type: ignorekjhgkjgjk
         fwi['biru'] = fuzz.trapmf(fwi.universe, [0, 0, 1, 2])
         fwi['hijau'] = fuzz.trapmf(fwi.universe, [1, 2, 6, 7])
-        fwi['kuning'] = fuzz.trapmf(fwi.universe, [6, 7, 13,13])
-        fwi['merah'] = fuzz.trapmf(fwi.universe, [7,13,13,13])
+        fwi['kuning'] = fuzz.trimf(fwi.universe, [6, 7, 13])
+        fwi['merah'] = fuzz.trapmf(fwi.universe, [7, 13, np.inf, np.inf])
 
         fwi_level_biru = fuzz.interp_membership(fwi.universe, fwi['biru'].mf, value)
         fwi_level_hijau = fuzz.interp_membership(fwi.universe, fwi['hijau'].mf, value)
         fwi_level_kuning = fuzz.interp_membership(fwi.universe, fwi['kuning'].mf, value)
         fwi_level_merah = fuzz.interp_membership(fwi.universe, fwi['merah'].mf, value)
         result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah]
+        plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
+        plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
+        plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
+        plt.plot(fwi.universe, fwi['merah'].mf, 'r', linewidth=1.5, label='Merah')
         return result
 
     #implement to calculate fwi from all parameters
