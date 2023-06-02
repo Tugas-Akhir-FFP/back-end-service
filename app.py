@@ -17,7 +17,6 @@ import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 import decimal
 from statsmodels.tsa.holtwinters import ExponentialSmoothing 
-from decimal import Decimal, getcontext
 
 app = Flask(__name__)
 api = Api(app)
@@ -100,55 +99,6 @@ def grid_search(df):
     print("Data Test : " ,test)
     return predictions.tolist() 
 
-# def new_gridSC(data):
-#     # Define Grid Search Parameter
-#     param_grid = {
-#         'trend': ['add', 'mul', None],
-#         'seasonal': ['add', 'mul', None],
-#         'seasonal_periods': [4, 12],
-#         'smoothing_level': np.linspace(0.1, 0.9, 9),
-#         'smoothing_trend': np.linspace(0.1, 0.9, 9),
-#         'smoothing_seasonal': np.linspace(0.1, 0.9, 9)
-#     }
-    
-#     train, test = data.iloc[1:2439], data.iloc[2439:2459]
-
-#     def fit_model(params, data):
-#         model = ExponentialSmoothing(data, trend=params['trend'], seasonal=params['seasonal'],
-#                                      seasonal_periods=params['seasonal_periods'],
-#                                      smoothing_level=params['smoothing_level'],
-#                                      smoothing_trend=params['smoothing_trend'],
-#                                      smoothing_seasonal=params['smoothing_seasonal'])
-#         score = model.fit().aic
-#         return score
-    
-#     grid_search = GridSearchCV(estimator=ExponentialSmoothing(endog=train), param_grid=param_grid)
-#     results = Parallel(n_jobs=-1)(
-#         delayed(fit_model)(params, train) for params in grid_search.param_grid
-#     )
-
-#     # Find best parameter combination
-#     best_index = np.argmin(results)
-#     best_params = grid_search.param_grid[best_index]
-
-#     print("Best parameter:", best_params)
-#     print("Best AIC Score:", results[best_index])
-
-#     # Fit the best model to training data
-#     best_model = ExponentialSmoothing(train, trend=best_params['trend'], seasonal=best_params['seasonal'],
-#                                       seasonal_periods=best_params['seasonal_periods'],
-#                                       smoothing_level=best_params['smoothing_level'],
-#                                       smoothing_trend=best_params['smoothing_trend'],
-#                                       smoothing_seasonal=best_params['smoothing_seasonal'])
-#     best_model.fit()
-
-#     # Evaluate the best model
-#     Prediction = best_model.predict(start=len(train), end=len(train) + len(test) - 1)
-
-#     return best_model, Prediction        
-
-
-
 def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal):
     print(len(df))
     low = 1451
@@ -201,80 +151,7 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal):
     return predictions.tolist()
 #create function for formula fwi calculation using 4 parameter
 def fwiCalculation(temperature, humidity, wind, rainfall):
-    # #calculate ffmc
-    # ffmc = 0.0 
-    # if temperature > -1.1 and temperature < 30.0 :
-    #     ffmc = (59.5 * (math.exp((temperature - 10.0) / -6.0))) - (14.0 * humidity) + (0.5 * wind) + 43.5
-    #     if ffmc < 0.0 :
-    #         ffmc = 0.0
-    # elif temperature >= 30.0 :
-    #     ffmc = (122.0 * (math.exp((temperature - 10.0) / -6.0))) - (0.2 * (100.0 - humidity)) + (wind * 0.1) + 50.0
-    #     if ffmc > 101.0 :
-    #         ffmc = 101.0
-
-    # #calculate DC
-    # dc = (ffmc - 30.0) * 0.5 + 3.0 * (wind / 20.0)
-
-    # #calculate ISI
-    # isi = 0.0 
-    # if wind > 40.0 :
-    #     isi = 16.0
-    # else :
-    #     isi = (wind / 4.0) * (math.exp(0.05039 * humidity)) * 0.01
-
-    # #calculate BUI
-    # bui = 0.0
-    # if dc <= 0.0 :
-    #     bui = 0.0
-    # else :
-    #     bui = (dc / 10.0) * (0.5 + 0.3 * math.log10(rainfall + 1.0))
-
-    # #calculate FWI
-    # fwi = 0.0
-    # if bui <= 80.0 :
-    #     fwi = bui * 0.1 + isi * 0.4
-    # else : 
-    #     fwi = bui * 0.6 + isi * 0.4
-
-    # m1 = 2.303 * (math.log10(humidity) - 0.4343 * math.log10(100 - humidity))
-    # m2 = 0.987 * (math.log10(rainfall + 0.1))
-    # m3 = 0.0345 * temperature
-    # m4 = 1.59 * (math.log10(wind + 0.396))
-    # fwi = m1 + m2 + m3 + m4
-
-    # try:
-    #     m1 = 2.303 * (math.log10(humidity) - 0.4343 * math.log10(100 - humidity))
-    #     m2 = 0.987 * (math.log10(rainfall + 0.1))
-    #     m3 = 0.0345 * temperature
-    #     m4 = 1.59 * (math.log10(wind + 0.396))
-    #     fwi = m1 + m2 + m3 + m4
-    #     return fwi
-    # except (ValueError, ZeroDivisionError) as e:
-    #     print("Invalid input values:", e)
-    #     return None
-    # FFMC_old = 85.0
-    # DMC_old = 6.0
-    # DC_old = 15.0
-
-    # # Calculate FFMC
-    # FFMC_new = (FFMC_old + 0.0278 * DMC_old * math.exp(0.0385 * (temperature - 20.0))) * (1.0 - math.exp(-0.1 * humidity))
-
-    # # Calculate DMC
-    # DMC_new = (DMC_old + 0.1 * rainfall) * math.exp(0.1 * (temperature - 20.0))
-
-    # # Calculate DC
-    # DC_new = (DC_old + 1.5 * (rainfall - 1.5)) * math.exp(0.023 * (temperature - 20.0))
-
-    # # Calculate ISI
-    # ISI = 0.4 * wind
-
-    # # Calculate BUI
-    # BUI = 0.5 * (DMC_new + DC_new) / (10.0 - 0.1 * rainfall)
-
-    # # Calculate FWI
-    # FWI = (ISI + BUI) / 2.0
-
-
+    
     ## Calculate FFMC
     prev_ffmc = 85
     prev_dmc = 6
@@ -300,13 +177,12 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
             Mrt = mrprev
         else:
             Mrt = mrprev + term1 + term2
-        # Mrt = mrprev + 42.5 * pF * math.exp((251 - mrprev) / 100) * (1 - math.exp( pF / 6.93)) + 0.0015 * (mrprev - 150) ** 2 * math.sqrt(pF)
 
     ## Calculate Ed
     Ed = 0.942 * (humidity ** 0.679) + (11 * math.exp((humidity - 100) / 10)) + 0.18 * (21.1 - temperature) * (1 - math.exp(1/(0.115 * humidity)))
 
     ## Calculate Kd
-    m = 0.0
+    
     if Ed <= mrprev : 
         Ko = 0.424 * (1 - (humidity/ 100) ** 1.7) + (0.0694 * math.sqrt(wind)) * (1 - ((humidity) / 100) ** 8)
         Kd = Ko * (0.581 * math.exp(0.0365 * temperature))
@@ -321,13 +197,10 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
             K1 = 0.424 * (1 - ((100-humidity / 100) ** 1.7)) + (0.0694 * math.sqrt(wind)) * (1 - ((100-humidity / 100) ** 8))
             Kw = K1 * (0.581 * math.exp(0.0365 * temperature))
             m = Ew - (Ew - mrprev) * 10 ** (1/Kw)
-            print(m,"m Ewe")
-            if Ew <= mrprev <= Ed :
-                m = mrprev
-                print(m,"m Ew")
+        else :
+            m = mrprev
     ## Calculate FFMC
     FFMC = 59.5 * ((250 - m )/ (147.2 + m))
-    print(m,"maaaaaaaaaaaaaaaaaaaaaaaaaa")
 
 
 
@@ -401,50 +274,37 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
 
 
     ### ISI AREA
-    getcontext().prec = 2
+    decimal.getcontext().prec = 2
     ## Calculate m
     m = 147.2 * ((101 - FFMC) / (59.5 + FFMC))
     ## Calculate fU 
     fU = math.exp(0.05039 * wind)
-    print("----- fU ----")
-    print(fU)
     ## Calculate fF
-    # fF = (91.9 * math.exp(1/ (0.1386 * m)) * (1 + (m ** 5.31/ 4.93 * 10**(7))))
     tes = 1 + ((m ** 5.31)/ (4.93 * (10**(7))))
     fF = 91.9*math.exp(1/(0.1386*m))*tes
-
     ## Calculate ISI
     ISI = 0.208 * fU * fF
-    ISI = Decimal(ISI)
-    print("----- ISI ----")
-    print(ISI)
 
 
     ### BUI AREA
     if DMC <= 0.4 * DC :
         BUI = 0.8 * (DMC * DC) / (DMC + 0.4 * DC)
     else :
-        BUI = DMC - (1 - (0.8 * DC / (DMC + 0.4 * DC))) * (0.92 + (0.0114 * DMC) ** 1.7)
-    
-    print(BUI,"BUI")
+        BUI = DMC - (1 - (0.8 * DC / (DMC + 0.4 * DC))) * (0.92 + (0.0114 * DMC) ** 1.7)    
     ### FWI AREA
     ## Calculate fD 
     if BUI <= 80 :
         fD = 0.626 * (BUI ** 0.809) + 2
     else :
         fD = 1000 / (25 + 108.64 * math.exp(-0.023 * BUI))
-    print(fD)
     ## Calculate BScale
     BScale = abs(0.1 * ISI * fD)
-    print(BScale, "BScale")
     ## Calculate FWI
     FWI = 0.0
     if BScale > 1 :
         FWI = math.exp(2.72 * (0.434 * (math.log(BScale)) ** 0.647))
-        print(FWI, "FWI1")
     elif BScale <= 1 :
         FWI = BScale
-        print(FWI, "FWI2")
     #Return with round 2 decimalsss
     return round(FWI,2)
 
@@ -546,62 +406,12 @@ def dataProcessing(data, periods, start, end, freq='D'):
     #return to list
     rainfall_list = rainfall_data['Rainfall'].tolist()
 
-    #Create new variable to implement grid search for all parameters
-    # grid_temp = grid_search(temperature_data)
-    # grid_humidity = grid_search(humidity_data)
-    # grid_wind = grid_search(wind_data)
-    # grid_rainfall = grid_search(rainfall_data)
-
-    # ## New Grid Search
-    # temp_grid = new_gridSC(temperature_data)
-    # humidity_grid = new_gridSC(humidity_data)
-    # wind_grid = new_gridSC(wind_data)
-    # rainfall_grid = new_gridSC(rainfall_data)
-
-
-    # print("----- HASIL NEW GRID SEARCH -----")
-    # print(temp_grid)
-    # print(humidity_grid)
-    # print(wind_grid)
-    # print(rainfall_grid)
-
-    
-
-    # temp = Prediction(temperature_data,'additive', 'multiplicative', 12, 0.5, 0.1, 0.2)
-    # humidity = Prediction(humidity_data,'additive', 'additive', 12, 0.1, 0.9, 0.5)
-    # wind = Prediction(wind_data,'multiplicative', 'additive', 12, 0.9, 0.1,0.2)
-    # rainfall = Prediction(rainfall_data,'additive', 'additive', 4, 0.9, 0.4,0.2 )
-
-    # # Kabupaten Kotawaringin Barat
-    # temp = Prediction(temperature_data,'additive', 'multiplicative', 12, 0.6, 0.4, 0.2)
-    # humidity = Prediction(humidity_data,'multiplicative', 'additive', 12, 0.1, 0.5, 0.1)
-    # wind = Prediction(wind_data,'multiplicative', 'multiplicative', 12, 0.1, 0.7,0.1)
-    # rainfall = Prediction(rainfall_data,'additive', 'additive', 12, 0.1, 0.1,0.1)
-
     # Kabupaten Kotawaringin Barat versi baru
     temp = Prediction(temperature_data,None, None, 4, 0.9, 0.1, 0.1)
     humidity = Prediction(humidity_data,None, 'multiplicative', 4, 0.9, 0.1, 0.1)
     wind = Prediction(wind_data,None, 'additive', 4, 0.9, 0.1,0.1)
     rainfall = Prediction(rainfall_data,None, None, 4, 0.9, 0.1,0.1)
 
-    # ## Kabupaten Sidoarjo
-    # temp = Prediction(temperature_data,'multiplicative', 'multiplicative', 4, 0.5, 0.3, 0.6)
-    # humidity = Prediction(humidity_data,'multiplicative', 'additive', 12, 0.1, 0.5, 0.1)
-    # wind = Prediction(wind_data,'multiplicative', 'multiplicative', 12, 0.1, 0.7,0.1)
-    # rainfall = Prediction(rainfall_data,'additive', 'additive', 12, 0.1, 0.1,0.1)
-    
-    # grid_result = [
-    #     {'Temperature' : grid_temp},
-    #     {'Humidity' : grid_humidity},
-    #     {'Wind' : grid_wind},
-    #     {'Rainfall' : grid_rainfall},
-    # ]
-
-    # print("----- HASIL GRID SEARCH -----")
-    # print(grid_temp)
-    # print(grid_humidity)
-    # print(grid_wind)
-    # print(grid_rainfall)
 
     predict_result = [
         {'Temperature' : temp},
@@ -612,14 +422,10 @@ def dataProcessing(data, periods, start, end, freq='D'):
 
 
     #Fuzzy Universe
-    def custom_membership(x):
-        if x > 13:
-            return 1
-        else:
-            return 0
+
     def fuzzy(value):
         result=[]
-        fwi = ctrl.Antecedent(np.arange(0, 20, 1), 'x') # type: ignore
+        fwi = ctrl.Antecedent(np.arange(0, 20, 1), 'x') 
         fwi['biru'] = fuzz.trapmf(fwi.universe, [0, 0, 1, 2])
         fwi['hijau'] = fuzz.trapmf(fwi.universe, [1, 2, 6, 7])
         fwi['kuning'] = fuzz.trimf(fwi.universe, [6, 7, 13])
@@ -634,6 +440,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
         plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
         plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
         plt.plot(fwi.universe, fwi['merah'].mf, 'r', linewidth=1.5, label='Merah')
+        # plt.show()
         return result
 
     #implement to calculate fwi from all parameters
