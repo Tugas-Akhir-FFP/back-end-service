@@ -17,6 +17,7 @@ import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 import decimal
 from statsmodels.tsa.holtwinters import ExponentialSmoothing 
+from decimal import Decimal, getcontext
 
 app = Flask(__name__)
 api = Api(app)
@@ -400,7 +401,7 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
 
 
     ### ISI AREA
-    decimal.getcontext().prec = 2
+    getcontext().prec = 2
     ## Calculate m
     m = 147.2 * ((101 - FFMC) / (59.5 + FFMC))
     ## Calculate fU 
@@ -414,6 +415,7 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
 
     ## Calculate ISI
     ISI = 0.208 * fU * fF
+    ISI = Decimal(ISI)
     print("----- ISI ----")
     print(ISI)
 
@@ -617,7 +619,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
             return 0
     def fuzzy(value):
         result=[]
-        fwi = ctrl.Antecedent(np.arange(0, 20, 1), 'x') # type: ignorekjhgkjgjk
+        fwi = ctrl.Antecedent(np.arange(0, 20, 1), 'x') # type: ignore
         fwi['biru'] = fuzz.trapmf(fwi.universe, [0, 0, 1, 2])
         fwi['hijau'] = fuzz.trapmf(fwi.universe, [1, 2, 6, 7])
         fwi['kuning'] = fuzz.trimf(fwi.universe, [6, 7, 13])
