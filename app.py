@@ -140,15 +140,13 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal):
     print("Mse : ", mse)
     print("R2 : ", r2)
     print("RMSE : ", rmse)
-    # #error calculation
-    # mse = np.square(np.subtract(test,predictions)).mean()
-    # rmse = math.sqrt(mse)
-    # r2 = r2_score(test, predictions)
-    # print(mse,'mse')
-    # print(rmse,'rmse')
-    # print(r2,'r2')
 
-    return predictions.tolist()
+    return {
+        'predictions' : predictions.tolist(),
+        'mse' : mse,
+        'r2' : r2,
+        'rmse' : rmse
+    }
 #create function for formula fwi calculation using 4 parameter
 def fwiCalculation(temperature, humidity, wind, rainfall):
     
@@ -315,7 +313,13 @@ def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list
         fwi_list.append(fwi)
     return fwi_list
 
-def dataProcessing(data, periods, start, end, freq='D'): 
+def dataProcessing(data, periods, start, end, freq='D'):
+    def pre_Fix_data(data) :
+        data = data.replace(['8888', ''], np.nan)
+        data = data.astype(float)
+        data = data.fillna(method='ffill').fillna(method='bfill')
+        return data
+    
     index = pd.date_range(start, end, freq=freq)
     df = pd.DataFrame(data)
     df.columns = df.iloc[0]
@@ -328,101 +332,47 @@ def dataProcessing(data, periods, start, end, freq='D'):
     df_filtered = df[df['Date'].between(start, end)]
     
     
-    # select temperature data
-    temperature_data = df_filtered[['Date', 'Temperature']]
-    temperature_data = temperature_data.set_index('Date')
-    temperature_list = temperature_data['Temperature'].tolist()
+    parameters = []
+    parameters_names = ['Temperature', 'Humidity', 'Wind', 'Rainfall']
+
+    for param_name in parameters_names : 
+        param_data = df_filtered[['Date', param_name]].set_index('Date')
+        param_data = pre_Fix_data(param_data).resample('D').mean()
+        param_list = param_data[param_name].tolist()
+
+        parameters.append({
+            'name': param_name,
+            'data': param_data,
+            'trend': None if param_name in ['Temperature', 'Rainfall'] else 'multiplicative' if param_name == 'Humidity' else 'additive',
+            'seasonal': None
+        })
+
+        globals()[f'{param_name.lower()}_list'] = param_list
+
     date_list = df_filtered['Date'].tolist()
 
-    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for temperature
-    temperature_data = temperature_data.replace('8888', np.nan)
-    temperature_data = temperature_data.replace('', np.nan)
-    temperature_data = temperature_data.replace('0',np.nan)
-    temperature_data = temperature_data.fillna(method='ffill')
-    temperature_data = temperature_data.fillna(method='bfill')
-    temperature_data = temperature_data.astype(float)
-    temperature_data = temperature_data.reset_index()
-    temperature_data = temperature_data.set_index('Date')
-    temperature_data = temperature_data.resample('D').mean()
-    #return to list
-    temperature_list = temperature_data['Temperature'].tolist()
+    
 
-    # Select humidity data
-    humidity_data = df_filtered[['Date', 'Humidity']]
-    humidity_data = humidity_data.set_index('Date')
-    humidity_list = humidity_data['Humidity'].tolist()
-    date_list = df_filtered['Date'].tolist()
+    predict_result = []
+    error_result = []
 
-    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for humidity
-    humidity_data = humidity_data.replace('8888', np.nan)
-    humidity_data = humidity_data.replace('', np.nan)
-    humidity_data = humidity_data.replace('0',np.nan)
-    humidity_data = humidity_data.fillna(method='ffill')
-    humidity_data = humidity_data.fillna(method='bfill')
-    humidity_data = humidity_data.astype(float)
-    humidity_data = humidity_data.reset_index()
-    humidity_data = humidity_data.set_index('Date')
-    humidity_data = humidity_data.resample('D').mean()
-    #return to list
-    humidity_list = humidity_data['Humidity'].tolist()
+    # Looping for prediction
+    for param in parameters:
+        result = Prediction(param['data'], param['seasonal'], param['trend'], 4, 0.9, 0.1, 0.1)
+        predict_result.append({param['name']: result['predictions']})
 
-    # Select wind data
-    wind_data = df_filtered[['Date', 'Wind']]
-    wind_data = wind_data.set_index('Date')
-    wind_list = wind_data['Wind'].tolist()
-    date_list = df_filtered['Date'].tolist()
+        error_result.append({
 
-    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for wind
-    wind_data = wind_data.replace('8888', np.nan)
-    wind_data = wind_data.replace('', np.nan)
-    wind_data = wind_data.replace('0',np.nan)
-    wind_data = wind_data.fillna(method='ffill')
-    wind_data = wind_data.fillna(method='bfill')
-    wind_data = wind_data.astype(float)
-    wind_data = wind_data.reset_index()
-    wind_data = wind_data.set_index('Date')
-    wind_data = wind_data.resample('D').median()
-    #return to list
-    wind_list = wind_data['Wind'].tolist()
+            param['name']: {
+                'MSE': result['mse'],
+                'RMSE': result['rmse'],
+                'R2': result['r2']
+            }
+    })
 
 
-    # Select rainfall data
-    rainfall_data = df_filtered[['Date', 'Rainfall']]
-    rainfall_data = rainfall_data.set_index('Date')
-    rainfall_list = rainfall_data['Rainfall'].tolist()
-    date_list = df_filtered['Date'].tolist()
 
-    #Replace 8888 with nan, null value with nan, fill nan with previous value, fill nan with next value for rainfall
-    rainfall_data = rainfall_data.replace('8888', np.nan)
-    rainfall_data = rainfall_data.replace('', np.nan)
-    rainfall_data = rainfall_data.replace('0',np.nan)
-    rainfall_data = rainfall_data.fillna(method='ffill')
-    rainfall_data = rainfall_data.fillna(method='bfill')
-    rainfall_data = rainfall_data.astype(float)
-    rainfall_data = rainfall_data.reset_index()
-    rainfall_data = rainfall_data.set_index('Date')
-    # rainfall_data = rainfall_data.resample('D').mean()
-    rainfall_data = rainfall_data.resample('D').median()
-    #return to list
-    rainfall_list = rainfall_data['Rainfall'].tolist()
-
-    # Kabupaten Kotawaringin Barat versi baru
-    temp = Prediction(temperature_data,None, None, 4, 0.9, 0.1, 0.1)
-    humidity = Prediction(humidity_data,None, 'multiplicative', 4, 0.9, 0.1, 0.1)
-    wind = Prediction(wind_data,None, 'additive', 4, 0.9, 0.1,0.1)
-    rainfall = Prediction(rainfall_data,None, None, 4, 0.9, 0.1,0.1)
-
-
-    predict_result = [
-        {'Temperature' : temp},
-        {'Humidity' : humidity},
-        {'Wind' : wind},
-        {'Rainfall' : rainfall}
-    ]
-
-
-    #Fuzzy Universe
-
+    ## Fuzzy Universe
     def fuzzy(value):
         result=[]
         fwi = ctrl.Antecedent(np.arange(0, 20, 1), 'x') 
@@ -443,31 +393,52 @@ def dataProcessing(data, periods, start, end, freq='D'):
         # plt.show()
         return result
 
+    # Get Prediction result from each parameter list 
+    temperature_prediction = predict_result[0]['Temperature']
+    humidity_prediction = predict_result[1]['Humidity']
+    wind_prediction = predict_result[2]['Wind']
+    rainfall_prediction = predict_result[3]['Rainfall']
+
     #implement to calculate fwi from all parameters
-    fwi_values = calculate_fwi_list(temp, humidity, wind, rainfall)
+    fwi_values = calculate_fwi_list(temperature_prediction, humidity_prediction, wind_prediction, rainfall_prediction)
     fuzzy_result = []
     for i in range(len(fwi_values)): 
         result = fuzzy(fwi_values[i])
-        fuzzy_result.append({'Data' : fwi_values[i], 'Fuzzy' : result})
+        fuzzy_result.append({'FWI Value' : fwi_values[i], 'Fuzzy' : result})
     
+
+    data_result = []
+    #looping to get data from each parameter
+    for i in range(len(predict_result[0]['Temperature'])):
+        result = {}
+        for param in parameters:
+            param_name = param['name']
+            param_predictions = predict_result[parameters.index(param)][param_name]
+            result[param_name] = {
+                'Data': i,
+                'Prediction': param_predictions[i],
+                'Fuzzy': {
+                    'FWI Value': fwi_values[i],
+                    'Fuzzy': fuzzy_result[i]['Fuzzy']
+                }
+            }
+        data_result.append(result)
+
     response = {
-        # 'Grid Search' : grid_result,
-        'Prediction' : predict_result,
-        'Fuzzy Result' : fuzzy_result,
-        'Parameter' : [],
-        'Fwi Result' : fwi_values
+        'Error Result' : error_result,
+        'Data Result' : data_result,
     }
-    for i in range(len(date_list)):
-        data = {
+    # for i in range(len(date_list)):
+    #     data = {
             
-            'Date': date_list[i],
-            'Temperature': temperature_list[i],
-            'Humidity': humidity_list[i],
-            'Wind': wind_list[i],
-            'Rainfall': rainfall_list[i],
-        }
+    #         'Date': date_list[i],
+    #         'Temperature': temperature_list[i],
+    #         'Humidity': humidity_list[i],
+    #         'Wind': wind_list[i],
+    #         'Rainfall': rainfall_list[i],
+    #     }
         
-        response['Parameter'].append(data)
+    #     response['Parameter'].append(data)
 
     # json_data = json.dumps(response, indent=4)
     return response
