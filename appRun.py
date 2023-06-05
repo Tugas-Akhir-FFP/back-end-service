@@ -30,7 +30,7 @@ param_grid = {'seasonal': ['additive', 'multiplicative'],
             'smoothing_seasonal': np.linspace(0.1, 0.9, 9)}
 
 def grid_search(df):
-    train, test = df[1:1577], df[1577:1587]
+    train, test = df[1:1500], df[1470:1500]
     results = []
     for seasonal in param_grid['seasonal']:
         for trend in param_grid['trend']:
@@ -285,17 +285,17 @@ def dataProcessing(data, periods, start, end, freq='D'):
 
     #Create new variable to implement grid search for all parameters
     # grid_temp = grid_search(temperature_data)
-    # grid_humidity = grid_search(humidity_data)
+    grid_humidity = grid_search(humidity_data)
     # grid_wind = grid_search(wind_data)
     # grid_rainfall = grid_search(rainfall_data)
-    temp = Prediction(temperature_data,'additive', 'additive', 12, 0.2, 0.6, 0.2)
-    humidity = Prediction(humidity_data,'additive', 'additive', 12, 0.2, 0.6, 0.2)
-    wind = Prediction(wind_data,'multiplicative', 'multiplicative', 4, 0.7, 0.8,0.4)
-    rainfall = Prediction(rainfall_data,'multiplicative', 'multiplicative', 4, 0.4, 0.1,0.9 )
-    print(temp,"temp")
-    print(humidity,"humidity")
-    print(wind,"wind")
-    print(rainfall,"rainfall")
+    # temp = Prediction(temperature_data,'additive', 'additive', 12, 0.2, 0.6, 0.2)
+    # humidity = Prediction(humidity_data,'additive', 'additive', 12, 0.2, 0.6, 0.2)
+    # wind = Prediction(wind_data,'multiplicative', 'multiplicative', 4, 0.7, 0.8,0.4)
+    # rainfall = Prediction(rainfall_data,'multiplicative', 'multiplicative', 4, 0.4, 0.1,0.9 )
+    # print(temp,"temp")
+    # print(humidity,"humidity")
+    # print(wind,"wind")
+    # print(rainfall,"rainfall")
     
     def fuzzy(value):
         result=[]

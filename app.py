@@ -29,6 +29,8 @@ param_grid = {'seasonal': ['additive', 'multiplicative', None],
             'smoothing_trend': np.linspace(0.1, 0.9, 9),
             'smoothing_seasonal': np.linspace(0.1, 0.9, 9)}
 
+
+
 def grid_search(df):
     print(len(df),"panjang data")
     #Kotawaringin df[1:1451], df[1451:1471]
@@ -99,11 +101,13 @@ def grid_search(df):
     print("Data Test : " ,test)
     return predictions.tolist() 
 
-def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal):
+def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, end):
     print(len(df))
-    low = 1451
-    high = 1471
-
+    # low = 1451
+    # high = 1471
+    low = df.index.get_loc(start)
+    high = df.index.get_loc(end)
+    print(low, high)
     #kota waringin barat
     # 8 Agustus 2022 Low = 1312 High = 1332
     # 1 januari 2023 Low = 1451 High = 1471
@@ -148,103 +152,85 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal):
         'rmse' : rmse
     }
 #create function for formula fwi calculation using 4 parameter
-def fwiCalculation(temperature, humidity, wind, rainfall):
+def fwiCalculation(temp, rh, wind, rainfall, month =1):
     
-    ## Calculate FFMC
-    prev_ffmc = 85
-    prev_dmc = 6
-    prev_dc = 15
+    dmc_prev = 6
+    dc_prev = 15
+    FFMC_prev = 85
 
-    ### FFMC AREA
+    m_prev = 147.2 * (101.0 - FFMC_prev) / (59.5 + FFMC_prev)
 
-    ## Calculate FFMC 
-    mrprev = 147.2 * ((101 - prev_ffmc) / (59.5 + prev_ffmc))
-
-    ## Calculate pF
-    if rainfall <= 0.5 :
-        pF =  rainfall - 0.5
-    else :
-        pF = rainfall
-    ## Calculate Mrt
-    if mrprev <= 150 :
-        Mrt = mrprev + 42.5 * pF * math.exp((251-mrprev)/100) * (1 - math.exp(pF/6.93))
-    elif mrprev > 150 :
-        term1 = 42.5 * pF * math.exp((251 - mrprev)/100) * (1 - math.exp(pF/6.93))
-        term2 = 0.0015 * ((mrprev - 150) ** 2) * (math.sqrt(pF))
-        if (251 - mrprev) / 100 < 0:
-            Mrt = mrprev
+    # Calculate mo
+    if rainfall > 0.5:
+        rf = rainfall - 0.5
+        if m_prev > 150.0:
+            mo = m_prev + (42.5 * rf * math.exp(-100.0 / (251.0 - m_prev)) * (1.0 - math.exp(-6.93 / rf))) + (0.0015 * (m_prev - 150.0) ** 2) * math.sqrt(rf)
         else:
-            Mrt = mrprev + term1 + term2
+            mo = m_prev + 42.5 * rf * math.exp(-100.0 / (251.0 - m_prev)) * (1.0 - math.exp(-6.93 / rf))
+    else:
+        mo = m_prev
 
-    ## Calculate Ed
-    Ed = 0.942 * (humidity ** 0.679) + (11 * math.exp((humidity - 100) / 10)) + 0.18 * (21.1 - temperature) * (1 - math.exp(1/(0.115 * humidity)))
+    # Calculate Ed
+    Ed = 0.942 * (rh ** 0.679) + (11.0 * math.exp((rh - 100.0) / 10.0)) + 0.18 * (21.1 - temp) * (1.0 - 1.0 / math.exp(0.115 * rh))
 
-    ## Calculate Kd
+    # Calculate m
+    if Ed > mo:
+        Ew = 0.618 * (rh ** 0.753) + (10.0 * math.exp((rh - 100.0) / 10.0)) + 0.18 * (21.1 - temp) * (1.0 - 1.0 / math.exp(0.115 * rh))
+        if mo < Ew:
+            k1 = 0.424 * (1.0 - (1.0 - rh / 100.0) ** 1.7) + (0.0694 * math.sqrt(wind)) * (1.0 - (1.0 - rh / 100.0) ** 8)
+            kw = k1 * (0.581 * math.exp(0.0365 * temp))
+            m = Ew - (Ew - mo) * math.exp(-kw)
+        else:
+            m = mo
+    else:
+        k0 = 0.424 * (1.0 - ((rh / 100.0) ** 1.7)) + (0.0694 * math.sqrt(wind)) * ((rh / 100.0) ** 8)
+        kd = k0 * (0.581 * math.exp(0.0365 * temp))
+        m = mo + (Ed - mo) * math.exp(-kd)
+
+    # Calculate FFMC
+    FFMC = (59.5 * (250.0 - m)) / (147.2 + m)
+    print(FFMC, "FFMC")
     
-    if Ed <= mrprev : 
-        Ko = 0.424 * (1 - (humidity/ 100) ** 1.7) + (0.0694 * math.sqrt(wind)) * (1 - ((humidity) / 100) ** 8)
-        Kd = Ko * (0.581 * math.exp(0.0365 * temperature))
-        m = Ed + (mrprev - Ed ) * 10 ** (1/Kd)
-        print(m,"m KD")
-    ## Calculate Ew
-    else :
-        Ew = 0.618 * (humidity ** 0.753) + (10 * math.exp((humidity - 100) / 10)) + 0.18 * (21.1 - temperature) * (1 - math.exp(-0.115 * humidity))
-
-    ## Calculate conditional K1
-        if Ew > mrprev :
-            K1 = 0.424 * (1 - ((100-humidity / 100) ** 1.7)) + (0.0694 * math.sqrt(wind)) * (1 - ((100-humidity / 100) ** 8))
-            Kw = K1 * (0.581 * math.exp(0.0365 * temperature))
-            m = Ew - (Ew - mrprev) * 10 ** (1/Kw)
-        else :
-            m = mrprev
-    ## Calculate FFMC
-    FFMC = 59.5 * ((250 - m )/ (147.2 + m))
-
-
-
-    ### DMC AREA
-    ## Calculate Pe 
-    Dmcrt = 0.0
-    if rainfall > 1.5 :
-        Pe = 0.92 * rainfall - 1.27
-
-        ## Calculate MtPrev 
-        MtPrev = 20 + (math.exp(5.6348 - (prev_dmc / 43.43 )))
-
-        ## Calculate b 
-        b = 0.0
-        if prev_dmc <= 33 :
-            b = 100 / (0.5 + 0.3 * prev_dmc)
-        elif prev_dmc > 33 and prev_dmc <= 65 :
-            b = 14 - 1.3 * math.log(prev_dmc)
-        elif prev_dmc > 65 :
-            b = 6.2 * math.log(prev_dmc) - 17.2
+    # Constants
+    el = [6.5, 7.5, 9.0, 12.8, 13.9, 13.9, 12.4, 10.9, 9.4, 8.0, 7.0, 6.0]
+    t = 0.5 * el[month-1]
+    
+    # Calculate mth
+    if temp < -1.1:
+        mth = 0
+    else:
+        mth = 1.894 * (temp + 1.1) * (100 - rh) * 12 * 10 ** (-6)
+    # print(mth,"mth")
+    # Calculate dmc with rainfall effect
+    if rainfall > 1.5:
+        ra = rainfall
+        rw = 0.92 * ra - 1.27
+        wmi = 20.0 + math.exp(5.6348 - 100.0 / (temp + 3.43))
+        if dmc_prev <= 33.0:
+            b = 100.0 / (0.5 + 0.3 * dmc_prev)
+        elif dmc_prev <= 65.0:
+            b = 14.0 - 1.3 * math.log(dmc_prev)
+        else:
+            b = 6.2 * math.log(dmc_prev) - 17.2
+        wmr = wmi + 1000 * rw / (48.77 + b * rw)
+        pr = 244.72-43.43 * math.log(wmr - 20.0)
+        # print(pr, "wmr")
         
-        ## Calculate Mrt
-        Mrt = MtPrev + 1000 * Pe / (48.77 + b * Pe)
+    else:
+        pr = dmc_prev
 
-        ## Calculate Dmcrt
-        Dmcrt = 244.72 - 43.43 * math.log(Mrt - 20)
-        if(Dmcrt < 0):
-            Dmcrt = 0
-
-    ## Calculate K 
-    Le = 12
-    K = 1.894 * (temperature + 1.1) * (100 - humidity) * Le * 10 ** (-6)
-    ### calculate DMC
-    DMC = 0.0
-    if rainfall <= 1.5 :
-        DMC = prev_dmc + 100 * K 
-    elif rainfall > 1.5 :
-        DMC = Dmcrt + 100 * K 
-
-    ### DC AREA
-    Dcrt = 0.0
-    if rainfall > 2.8 :
-        Pd = 0.83 * rainfall - 1.27
+    if pr < 0.0:
+        pr = 0.0
     
+    # Calculate dmc without rainfall effect
+    dmc = pr + 100.0 * mth
+    print(dmc, "DMC")
+
+    if rainfall > 2.8:
+        Pd = 0.83 * rainfall - 1.27
+        
         ## Calculate Qprev
-        Qprev = 800 * math.exp(-prev_dc / 400)
+        Qprev = 800 * math.exp(-dc_prev / 400)
 
         ## Calculate Qrt
         Qrt = Qprev + 3.937 * Pd
@@ -252,59 +238,45 @@ def fwiCalculation(temperature, humidity, wind, rainfall):
         ## Calculate DCrt
         Dcrt = 400 * math.log(800 / Qrt)
 
-        if Dcrt < 0 :
+        if Dcrt < 0:
             Dcrt = 0
+    else:
+        Dcrt = dc_prev
 
     ## Calculate V
     Lf = 12
-    if(temperature< -2.8):
-        temperature = -2.8;
-        V = 0.36 * (temperature + 2.8) + Lf 
-    else:
-        V = 0.36 * (temperature + 2.8) + Lf
+    if temp < -2.8:
+        temp = -2.8
+    V = 0.36 * (temp + 2.8) + Lf
 
     ## Calculate DC
-    DC = 0
-    if rainfall <= 2.8 :
-        DC = prev_dc + 0.5 * V
-    elif rainfall > 2.8 :
-        DC = Dcrt + 0.5 * V
-
-
-    ### ISI AREA
-    decimal.getcontext().prec = 2
-    ## Calculate m
-    m = 147.2 * ((101 - FFMC) / (59.5 + FFMC))
-    ## Calculate fU 
-    fU = math.exp(0.05039 * wind)
-    ## Calculate fF
-    tes = 1 + ((m ** 5.31)/ (4.93 * (10**(7))))
-    fF = 91.9*math.exp(1/(0.1386*m))*tes
-    ## Calculate ISI
-    ISI = 0.208 * fU * fF
-
-
-    ### BUI AREA
-    if DMC <= 0.4 * DC :
-        BUI = 0.8 * (DMC * DC) / (DMC + 0.4 * DC)
-    else :
-        BUI = DMC - (1 - (0.8 * DC / (DMC + 0.4 * DC))) * (0.92 + (0.0114 * DMC) ** 1.7)    
-    ### FWI AREA
-    ## Calculate fD 
-    if BUI <= 80 :
-        fD = 0.626 * (BUI ** 0.809) + 2
-    else :
-        fD = 1000 / (25 + 108.64 * math.exp(-0.023 * BUI))
-    ## Calculate BScale
-    BScale = abs(0.1 * ISI * fD)
-    ## Calculate FWI
-    FWI = 0.0
-    if BScale > 1 :
-        FWI = math.exp(2.72 * (0.434 * (math.log(BScale)) ** 0.647))
-    elif BScale <= 1 :
-        FWI = BScale
+    DC = Dcrt + 0.5 * V
+    print(DC,"DC")
+    
+    
+    if dmc <= 0.4 * DC:
+        bui = 0.8 * (dmc * DC) / (dmc + 0.4 * DC)
+    else:
+        bui = dmc - (1 - (0.8 * DC / (dmc + 0.4 * DC))) * (0.92 + (0.0114 * dmc) ** 1.7)
+    
+    # ISI calculate
+    m = 147.2 * (101.0 - FFMC) / (59.5 + FFMC)
+    Fu = math.exp(0.05039 * wind*3.6)
+    Ff = 91.9 * math.exp(-0.1386 * m) * (1.0 + (m ** 5.31) / (4.93 * (10 ** 7)))
+    isi = Ff * Fu* 0.208
+    print(isi, "ISI")
+    # calculate FWI
+    
+    if bui <= 80.0:
+        bb = 0.1 * isi * (0.626 * (bui ** 0.809) + 2.0)
+    else:
+        bb = 0.1 * isi * (1000.0 / (25 + 108.64 *math.exp(-0.023 * bui)))
+    if bb <= 1.0:
+        fwi = bb
+    else:
+        fwi = math.exp(2.72 * (0.434 * math.log(bb)) ** 0.647)
     #Return with round 2 decimalsss
-    return round(FWI,2)
+    return round(fwi,2)
 
 def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list):
     fwi_list = []
@@ -329,14 +301,14 @@ def dataProcessing(data, periods, start, end, freq='D'):
     #filter data by range date start and end
     df = df.drop(df.index[0]) 
     df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
-    df_filtered = df[df['Date'].between(start, end)]
+    # df_filtered = df[df['Date'].between(start, end)]
     
     
     parameters = []
     parameters_names = ['Temperature', 'Humidity', 'Wind', 'Rainfall']
 
     for param_name in parameters_names : 
-        param_data = df_filtered[['Date', param_name]].set_index('Date')
+        param_data = df[['Date', param_name]].set_index('Date')
         param_data = pre_Fix_data(param_data).resample('D').mean()
         param_list = param_data[param_name].tolist()
 
@@ -349,16 +321,17 @@ def dataProcessing(data, periods, start, end, freq='D'):
 
         globals()[f'{param_name.lower()}_list'] = param_list
 
-    date_list = df_filtered['Date'].tolist()
+    # date_list = df_filtered['Date'].tolist()
 
     
 
     predict_result = []
     error_result = []
-
+    # date list from start to end
+    date_list = pd.date_range(start, end, freq=freq).tolist()
     # Looping for prediction
     for param in parameters:
-        result = Prediction(param['data'], param['seasonal'], param['trend'], 4, 0.9, 0.1, 0.1)
+        result = Prediction(param['data'], param['seasonal'], param['trend'], 4, 0.9, 0.1, 0.1, start, end)
         predict_result.append({param['name']: result['predictions']})
 
         error_result.append({
@@ -415,7 +388,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
             param_name = param['name']
             param_predictions = predict_result[parameters.index(param)][param_name]
             result[param_name] = {
-                'Data': i,
+                'Data': date_list[i],
                 'Prediction': param_predictions[i],
                 'Fuzzy': {
                     'FWI Value': fwi_values[i],
