@@ -154,17 +154,22 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
 #create function for formula fwi calculation using 4 parameter
 def fwiCalculation(temp, rh, wind, rainfall, month =1):
     
-    dmc_prev = 6
-    dc_prev = 15
-    FFMC_prev = 85
+    #convert wind from m/s to km/h
+    wind = wind * 3.6
+    dmc_prev = 2 * rainfall#default value for dmc_prev = 2 * rainfall
+    dc_prev = 5 * rainfall#default value for dc_prev = 5 * rainfall
+    FFMC_prev = 85 #"Default value"
 
+
+    ## FFMC SECTION
     m_prev = 147.2 * (101.0 - FFMC_prev) / (59.5 + FFMC_prev)
-
     # Calculate mo
     if rainfall > 0.5:
         rf = rainfall - 0.5
         if m_prev > 150.0:
             mo = m_prev + (42.5 * rf * math.exp(-100.0 / (251.0 - m_prev)) * (1.0 - math.exp(-6.93 / rf))) + (0.0015 * (m_prev - 150.0) ** 2) * math.sqrt(rf)
+            if mo > 250.0:
+                mo = 250.0
         else:
             mo = m_prev + 42.5 * rf * math.exp(-100.0 / (251.0 - m_prev)) * (1.0 - math.exp(-6.93 / rf))
     else:
@@ -182,53 +187,58 @@ def fwiCalculation(temp, rh, wind, rainfall, month =1):
             m = Ew - (Ew - mo) * math.exp(-kw)
         else:
             m = mo
+
     else:
-        k0 = 0.424 * (1.0 - ((rh / 100.0) ** 1.7)) + (0.0694 * math.sqrt(wind)) * ((rh / 100.0) ** 8)
+        k0 = 0.424 * (1.0 - ((rh / 100.0) ** 1.7)) + (0.0694 * math.sqrt(wind)) * (1.0 - ((rh / 100.0)) ** 8)
         kd = k0 * (0.581 * math.exp(0.0365 * temp))
-        m = mo + (Ed - mo) * math.exp(-kd)
+        m = Ed + (mo - Ed) * 10**(-kd)
 
     # Calculate FFMC
     FFMC = (59.5 * (250.0 - m)) / (147.2 + m)
-    print(FFMC, "FFMC")
     
-    # Constants
-    el = [6.5, 7.5, 9.0, 12.8, 13.9, 13.9, 12.4, 10.9, 9.4, 8.0, 7.0, 6.0]
-    t = 0.5 * el[month-1]
-    
-    # Calculate mth
+    # # Constants
+    # el = [6.5, 7.5, 9.0, 12.8, 13.9, 13.9, 12.4, 10.9, 9.4, 8.0, 7.0, 6.0]
+    # t = 0.5 * el[month-1]
+
+
+    ## DMC SECTION
+        
+    #Set default Day Lenght = 12 for indonesia
+    Le = 12
+    # Calculate mth = K for DMC
     if temp < -1.1:
-        mth = 0
+        temp = -1.1
+        mth = 1.894 * (temp + 1.1) * (100 - rh) * Le * 10 ** (-6)
     else:
-        mth = 1.894 * (temp + 1.1) * (100 - rh) * 12 * 10 ** (-6)
-    # print(mth,"mth")
+        mth = 1.894 * (temp + 1.1) * (100 - rh) * Le * 10 ** (-6)
+
     # Calculate dmc with rainfall effect
     if rainfall > 1.5:
-        ra = rainfall
-        rw = 0.92 * ra - 1.27
-        wmi = 20.0 + math.exp(5.6348 - 100.0 / (temp + 3.43))
+        rw = 0.92 * rainfall - 1.27
+        wmi = 20.0 + math.exp(5.6348 - ((dmc_prev/ 43.43)))
+
         if dmc_prev <= 33.0:
             b = 100.0 / (0.5 + 0.3 * dmc_prev)
         elif dmc_prev <= 65.0:
             b = 14.0 - 1.3 * math.log(dmc_prev)
         else:
             b = 6.2 * math.log(dmc_prev) - 17.2
+
+        #MRT Section
         wmr = wmi + 1000 * rw / (48.77 + b * rw)
         pr = 244.72-43.43 * math.log(wmr - 20.0)
-        # print(pr, "wmr")
+        dmc = pr + 100.0 * mth
         
     else:
         pr = dmc_prev
-
-    if pr < 0.0:
-        pr = 0.0
+        if pr < 0.0:
+            pr = 0.0
+        dmc = pr + 100.0 * mth
     
-    # Calculate dmc without rainfall effect
-    dmc = pr + 100.0 * mth
-    print(dmc, "DMC")
-
+    ## DC SECTION
+    ## Calculate DC
     if rainfall > 2.8:
         Pd = 0.83 * rainfall - 1.27
-        
         ## Calculate Qprev
         Qprev = 800 * math.exp(-dc_prev / 400)
 
@@ -238,43 +248,53 @@ def fwiCalculation(temp, rh, wind, rainfall, month =1):
         ## Calculate DCrt
         Dcrt = 400 * math.log(800 / Qrt)
 
-        if Dcrt < 0:
+        if Dcrt <= 0:
             Dcrt = 0
     else:
         Dcrt = dc_prev
 
     ## Calculate V
-    Lf = 12
+    Lf = 12 #set day length default value for indonesia
     if temp < -2.8:
         temp = -2.8
     V = 0.36 * (temp + 2.8) + Lf
+    if V <= 0:
+        V = 0.0
 
     ## Calculate DC
     DC = Dcrt + 0.5 * V
-    print(DC,"DC")
     
-    
-    if dmc <= 0.4 * DC:
+    ## BUI SECTION
+    buiprev = 0.4 * DC 
+    if dmc <= buiprev :
         bui = 0.8 * (dmc * DC) / (dmc + 0.4 * DC)
     else:
         bui = dmc - (1 - (0.8 * DC / (dmc + 0.4 * DC))) * (0.92 + (0.0114 * dmc) ** 1.7)
     
-    # ISI calculate
-    m = 147.2 * (101.0 - FFMC) / (59.5 + FFMC)
-    Fu = math.exp(0.05039 * wind*3.6)
-    Ff = 91.9 * math.exp(-0.1386 * m) * (1.0 + (m ** 5.31) / (4.93 * (10 ** 7)))
+    ## ISI Section
+    mFuel = 147.2 * (101.0 - FFMC) / (59.5 + FFMC)
+    Fu = math.exp(0.05039 * wind)
+    Ff = 91.9 * math.exp(-0.1386 * mFuel) * (1.0 + (mFuel ** 5.31) / (4.93 * (10 ** 7)))
     isi = Ff * Fu* 0.208
-    print(isi, "ISI")
-    # calculate FWI
-    
+
+
+    ## FWI  SECTION
+    bui = 82
     if bui <= 80.0:
-        bb = 0.1 * isi * (0.626 * (bui ** 0.809) + 2.0)
+        fD = 0.626 * (bui ** 0.809) + 2.0
+        bScale = 0.1 * isi * fD
+        if bScale <= 1.0:
+            fwi = bScale
+        else:
+            fwi = math.exp(2.72 * (0.434 * math.log(bScale)) ** 0.647)
     else:
-        bb = 0.1 * isi * (1000.0 / (25 + 108.64 *math.exp(-0.023 * bui)))
-    if bb <= 1.0:
-        fwi = bb
-    else:
-        fwi = math.exp(2.72 * (0.434 * math.log(bb)) ** 0.647)
+        fD = 1000.0 / (25.0 + 108.64 * math.exp(-0.023 * bui))
+        bScale = 0.1 * isi * fD
+        if bScale <= 1.0:
+            fwi = bScale
+        else:
+            fwi = math.exp(2.72 * (0.434 * math.log(bScale)) ** 0.647)
+
     #Return with round 2 decimalsss
     return round(fwi,2)
 
