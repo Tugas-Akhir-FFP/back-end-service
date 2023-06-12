@@ -33,8 +33,8 @@ param_grid = {'seasonal': ['additive', 'multiplicative', None],
 
 def grid_search(df):
 
-    low = 1235
-    high = 1248
+    low = 1454
+    high = 1470
     print(low, high)
     #Kotawaringin df[1:1451], df[1451:1471]
     #Sidoarjo df[1:2439], df[2439:2459]wewewew
@@ -65,12 +65,12 @@ def grid_search(df):
                                 r2 = r2_score(test, predictions)
                                 mse = mean_squared_error(test, predictions)
                                 rmse = math.sqrt(mse)
-                                results.append((seasonal, trend, seasonal_period, smoothing_level, smoothing_trend, smoothing_seasonal,r2))
+                                results.append((seasonal, trend, seasonal_period, smoothing_level, smoothing_trend, smoothing_seasonal,mse))
                             except:
                                 print('error')
     
     # Cari parameter yang menghasilkan r-square terbaik, udah di save
-    best_params = max(results,key=lambda x: x[-1])
+    best_params = min(results,key=lambda x: x[-1])
     model = ExponentialSmoothing(train,
                                 seasonal=best_params[0],
                                 trend=best_params[1],
@@ -98,33 +98,16 @@ def grid_search(df):
     print("Data Test : " ,test)
     return predictions.tolist() 
 
-# def normalisasi(data_predict) :
-#     mean = np.mean(data_predict)
-#     std = np.std(data_predict)
-#     normalisasi_predict = (data_predict - mean) / std
-
-#     return normalisasi_predict
-
-def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, end):
+def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, end, steps=0):
     print(len(df))
     # low = 1451
     # high = 1471
     low = df.index.get_loc(start)
     high = df.index.get_loc(end)
     print(low, high)
-    #kota waringin barat
-    # 8 Agustus 2022 Low = 1312 High = 1332
-    # 1 januari 2023 Low = 1451 High = 1471
-    # 17 Mei 2023 Low = 1580 High = 1599
-
-    # kab Sidoarjo
-    # 31 Maret 2023 Low = 3002 High = 3012
-    # low = 1312
-   # high = 1332
-
-    # Kab Gresik 
-    # low = 1312
-   # high = 1332
+   #Print data before prediction
+    print("Data Before Prediction")
+    print(df[low:high])
    
     train, test = df[1:high], df[low:high]
     print(len(train), len(test))
@@ -156,9 +139,36 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
         'rmse' : rmse
     }
 #create function for formula fwi calculation using 4 parameter
+
+def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
+    high = df.index.get_loc(end)
+    train = df[1:high]
+
+    model = ExponentialSmoothing(train,
+                                seasonal=seasonal,
+                                trend=trend,
+                                seasonal_periods=periods)
+    model_fit = model.fit(smoothing_level=slevel, 
+                        smoothing_trend=stren, 
+                        smoothing_seasonal=sseasonal)
+    
+    forecast = model_fit.forecast(steps=fore)
+    forecast = np.array(forecast).flatten().astype(int)
+
+    #print hasil forecast
+    print("Ini datanya Cuy whehehweweh Data After Forecast")
+    print(forecast)
+    
+    return forecast.tolist()
+
 def fwiCalculation(Temp, rh, wind, rainfall):
     
     fwi_VALUE = []
+    bui_VALUE = []
+    isi_VALUE = []
+    dmc_VALUE = []
+    dc_VALUE = []
+    ffmc_VALUE = []
 
 
     ## Set initial Value (Van wagner )
@@ -216,12 +226,6 @@ def fwiCalculation(Temp, rh, wind, rainfall):
 
         # Calculate FFMC
         FFMC = (59.5 * (250.0 - m)) / (147.2 + m)
-
-        
-        # # Constants
-        # el = [6.5, 7.5, 9.0, 12.8, 13.9, 13.9, 12.4, 10.9, 9.4, 8.0, 7.0, 6.0]
-        # t = 0.5 * el[month-1]
-
 
         ## DMC SECTION
             
@@ -328,38 +332,39 @@ def fwiCalculation(Temp, rh, wind, rainfall):
         dmc_prev = dmc
         dc_prev = DC
 
+        ## Append value round to 1 decimal Section
+        ffmc_VALUE.append(round(FFMC,1))
+        dmc_VALUE.append(round(dmc,1))
+        dc_VALUE.append(round(DC,1))
+        bui_VALUE.append(round(bui,1))
+        isi_VALUE.append(round(isi,1))
+        fwi_VALUE.append(round(fwi,1))
 
-        fwi_VALUE.append(fwi)
-        print("FWI VALUE for line 326: ", fwi_VALUE)
-
-    return [round(value, 1) for value in fwi_VALUE]
+        #return ffmc, dmc, dc, bui, isi, fwi round to 1 decimal
+    return ffmc_VALUE, dmc_VALUE, dc_VALUE, bui_VALUE, isi_VALUE, fwi_VALUE
 
 def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list):
-    # print("---------LIST SECTION---------")
-    # print(temperature_list)
-    # print(humidity_list)
-    # print(wind_list)
-    # print(rainfall_list)
-    # print("BEFORE CHANGES")
-    # ### Sample data from Canada Journal #####
-    ### NOTEEE : Data dari canada, rumus windkmh dari line 175 ( windkmh = current_wind)
-    # temperature_list = [17, 20, 8.5, 6.5, 13, 6, 5.5, 8.5, 9.5, 7, 6.5, 6, 13, 15.5, 23, 19]
-    # humidity_list = [42, 21, 40, 25, 34, 40, 52, 46, 54, 93, 71, 59, 52, 40, 25, 46]
-    # wind_list = [25, 25, 17, 6, 24, 22, 6, 16, 20, 14, 17, 17, 4, 11, 9, 16]
-    # rainfall_list = [0, 2.4, 0, 0, 0, 0.4, 0, 0, 0, 9, 1, 0, 0, 0, 0, 0]
-    # print("AFTER CHANGES")
-    # print(temperature_list)
-    # print(humidity_list)
-    # print(wind_list)
-    # print(rainfall_list)
+    # ## NOTEEE : Data dari canada, rumus windkmh dari line 175 ( windkmh = current_wind)
+    # temperature_list = [30,30,30,30,30,30,30]
+    # humidity_list = [87,87,87,87,87,87,87]
+    # wind_list = [3,3,3,3,3,3,3]
+    # rainfall_list = [2,1,0,0,1,1,2]
+    data_list = []
 
-    fwi_list = fwiCalculation(temperature_list, humidity_list, wind_list, rainfall_list)
-    # for i in range(len(temperature_list)):
-    #     fwi = fwiCalculation(temperature_list[i], humidity_list[i], wind_list[i], rainfall_list[i])
-    #     fwi_list.append(fwi)
-    return fwi_list
+    ffmc_list, dmc_list, dc_list, bui_list, isi_list, fwi_list = fwiCalculation(temperature_list, humidity_list, wind_list, rainfall_list)
+    for i in range(len(ffmc_list)):
+        data_list.append({
+            'ffmc': ffmc_list[i],
+            'dmc': dmc_list[i],
+            'dc': dc_list[i],
+            'bui': bui_list[i],
+            'isi': isi_list[i],
+            'fwi': fwi_list[i]
+        })
 
-def dataProcessing(data, periods, start, end, freq='D'):
+    return data_list
+
+def dataProcessing(data, periods, start, end, fore,freq='D'):
     def pre_Fix_data(data) :
         data = data.replace('', np.nan)
         data = data.replace(['0'], np.nan)
@@ -372,14 +377,13 @@ def dataProcessing(data, periods, start, end, freq='D'):
     df = pd.DataFrame(data)
     df.columns = df.iloc[0]
     df = df[:-periods]
-    df = df.rename(columns={'Tanggal':'Date','Tx':'Temperature','RH_avg':'Humidity','ff_avg':'Wind','RR':'Rainfall'})
+    df = df.rename(columns={'Tanggal':'Date','Tx':'Temperature','RH_avg':'Humidity','ff_x':'Wind','RR':'Rainfall'})
     
     #filter data by range date start and end
     df = df.drop(df.index[0]) 
     df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
     # df_filtered = df[df['Date'].between(start, end)]
-    
-    
+ 
     parameters = []
     parameters_names = ['Temperature', 'Humidity', 'Wind', 'Rainfall']
 
@@ -391,7 +395,7 @@ def dataProcessing(data, periods, start, end, freq='D'):
         parameters.append({
             'name': param_name,
             'data': param_data,
-            'trend': None if param_name in ['Temperature'] else 'multiplicative' if param_name == 'Humidity' else 'additive' if param_name == 'Rainfall' else 'additive',
+            'trend': None if param_name in ['Temperature','Humidity'] else 'multiplicative' if param_name == 'Wind' else 'additive' if param_name == 'Rainfall' else None,
             'seasonal': None
         })
 
@@ -399,26 +403,37 @@ def dataProcessing(data, periods, start, end, freq='D'):
 
     # date_list = df_filtered['Date'].tolist()
 
-    ## Grid Search
+    # # Grid Search
     # #show Rainfall data
     # print("--------- Rainfall Data ---------")
-    # print(parameters[3]['data'])
+    # print(parameters[2]['data'])
 
     # # Grid Search for rainfall
-    # Rainfall_grid = grid_search(parameters[3]['data'])
+    # Rainfall_grid = grid_search(parameters[2]['data'])
 
     # # Show grid Result
     # print("--------- Grid Search Result ---------")
+    # print("WIND SECTION")
     # print(Rainfall_grid)
 
+    forecast_result = []
     predict_result = []
     error_result = []
     # date list from start to end
     date_list = pd.date_range(start, end, freq=freq).tolist()
+
+    #get last date from dataset
+    last_date = df['Date'].max()
+    start_fore = last_date + pd.DateOffset(days=1)
+    end_fore = last_date + pd.DateOffset(days=fore)
+    date_fore = pd.date_range(start_fore, end_fore, freq='D').tolist()
+
     # Looping for prediction
     for param in parameters:
         result = Prediction(param['data'], param['seasonal'], param['trend'], 4, 0.9, 0.1, 0.1, start, end)
+        forecast = Forecast(param['data'], param['seasonal'], param['trend'], 4, 0.9, 0.1, 0.1, end, fore)
         predict_result.append({param['name']: result['predictions']})
+        forecast_result.append({param['name']: forecast})
 
         error_result.append({
 
@@ -451,55 +466,124 @@ def dataProcessing(data, periods, start, end, freq='D'):
         plt.plot(fwi.universe, fwi['merah'].mf, 'r', linewidth=1.5, label='Merah')
         # plt.show()
         return result
-
+    
     # Get Prediction result from each parameter list 
     temperature_prediction = predict_result[0]['Temperature']
     humidity_prediction = predict_result[1]['Humidity']
     wind_prediction = predict_result[2]['Wind']
     rainfall_prediction = predict_result[3]['Rainfall']
 
+    ## Get Forecast result from each parameter list
+    temperature_forecast = forecast_result[0]['Temperature']
+    humidity_forecast = forecast_result[1]['Humidity']
+    wind_forecast = forecast_result[2]['Wind']
+    rainfall_forecast = forecast_result[3]['Rainfall']
+
     #implement to calculate fwi from all parameters
     fwi_values = calculate_fwi_list(temperature_prediction, humidity_prediction, wind_prediction, rainfall_prediction)
+    fwi_forecast = calculate_fwi_list(temperature_forecast, humidity_forecast, wind_forecast, rainfall_forecast)
+
+    # Get data from fwi_values
+    data_ffmc = [item['ffmc'] for item in fwi_values]
+    data_dmc = [item['dmc'] for item in fwi_values]
+    data_dc = [item['dc'] for item in fwi_values]
+    data_bui = [item['bui'] for item in fwi_values]
+    data_isi = [item['isi'] for item in fwi_values]
+    data_fwi = [item['fwi'] for item in fwi_values]
+
+    # Get data from fwi_forecast
+    data_ffmc_fore = [item['ffmc'] for item in fwi_forecast]
+    data_dmc_fore = [item['dmc'] for item in fwi_forecast]
+    data_dc_fore = [item['dc'] for item in fwi_forecast]
+    data_bui_fore = [item['bui'] for item in fwi_forecast]
+    data_isi_fore = [item['isi'] for item in fwi_forecast]
+    data_fwi_fore = [item['fwi'] for item in fwi_forecast]
+
+    # Fuzzy for prediction
     fuzzy_result = []
     for i in range(len(fwi_values)): 
-        result = fuzzy(fwi_values[i])
-        fuzzy_result.append({'FWI Value' : fwi_values[i], 'Fuzzy' : result})
+        result = fuzzy(data_fwi[i])
+        fuzzy_result.append({
+            'FFMC Value' : data_ffmc[i],
+            'DMC Value' : data_dmc[i],
+            'DC Value' : data_dc[i],
+            'BUI Value' : data_bui[i],
+            'ISI Value' : data_isi[i],
+            'FWI Value' : data_fwi[i], 
+            'Fuzzy' : result})
     
+    # Fuzzy for forecast
+    fuzzy_forecast = []
+    for i in range(len(fwi_forecast)):
+        result = fuzzy(data_fwi_fore[i])
+        fuzzy_forecast.append({
+            'FFMC Value' : data_ffmc_fore[i],
+            'DMC Value' : data_dmc_fore[i],
+            'DC Value' : data_dc_fore[i],
+            'BUI Value' : data_bui_fore[i],
+            'ISI Value' : data_isi_fore[i],
+            'FWI Value' : data_fwi_fore[i], 
+            'Fuzzy' : result})
 
+    # List for result
     data_result = []
-    #looping to get data from each parameter
+    forecast_data = []
+
+    # Looping for Prediction
     for i in range(len(predict_result[0]['Temperature'])):
-        result = {}
-        for param in parameters:
-            param_name = param['name']
-            param_predictions = predict_result[parameters.index(param)][param_name]
-            result[param_name] = {
-                'Data': date_list[i],
-                'Prediction': param_predictions[i],
-                'Fuzzy': {
-                    'FWI Value': fwi_values[i],
-                    'Fuzzy': fuzzy_result[i]['Fuzzy']
-                }
+        result = {
+            'Date': date_list[i],
+            'Prediction': {
+                'Temp': predict_result[0]['Temperature'][i],
+                'Humidity': predict_result[1]['Humidity'][i],
+                'Wind': predict_result[2]['Wind'][i],
+                'Rainfall': predict_result[3]['Rainfall'][i]
+            },
+            'Result': {
+                'Category': {
+                    'ffmc': fwi_values[i]['ffmc'],
+                    'dmc': fwi_values[i]['dmc'],
+                    'dc': fwi_values[i]['dc'],
+                    'bui': fwi_values[i]['bui'],
+                    'isi': fwi_values[i]['isi'],
+                    'fwi': fwi_values[i]['fwi']
+                },
+                'Fuzzy': fuzzy_result[i]['Fuzzy']
             }
+        }
         data_result.append(result)
 
-    response = {
-        'Error Result' : error_result,
-        'Data Result' : data_result,
-    }
-    # for i in range(len(date_list)):
-    #     data = {
-            
-    #         'Date': date_list[i],
-    #         'Temperature': temperature_list[i],
-    #         'Humidity': humidity_list[i],
-    #         'Wind': wind_list[i],
-    #         'Rainfall': rainfall_list[i],
-    #     }
-        
-    #     response['Parameter'].append(data)
+    # Looping for Forecast
+    for i in range(len(forecast_result[0]['Temperature'])):
+        result = {
+            'Date': date_fore[i],
+            'Forecast': {
+                'Temp': forecast_result[0]['Temperature'][i],
+                'Humidity': forecast_result[1]['Humidity'][i],
+                'Wind': forecast_result[2]['Wind'][i],
+                'Rainfall': forecast_result[3]['Rainfall'][i]
+            },
+            'Result': {
+                'Category': {
+                    'ffmc': fwi_forecast[i]['ffmc'],
+                    'dmc': fwi_forecast[i]['dmc'],
+                    'dc': fwi_forecast[i]['dc'],
+                    'bui': fwi_forecast[i]['bui'],
+                    'isi': fwi_forecast[i]['isi'],
+                    'fwi': fwi_forecast[i]['fwi']
+                },
+                'Fuzzy': fuzzy_forecast[i]['Fuzzy']
+            }
+        }
+        forecast_data.append(result)
+   
 
-    # json_data = json.dumps(response, indent=4)
+
+    response = {
+        'Prediksi_Error' : error_result,
+        'Data_Result' : data_result,
+        'Forecast_Result' : forecast_data,
+    }
     return response
 
 
@@ -511,6 +595,7 @@ def get_credentials():
     periods = request.args.get('periods')
     start = request.args.get('start')
     end = request.args.get('end')
+    fore = request.args.get('fore')
     
     scope_app =['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive'] 
     cred = ServiceAccountCredentials.from_json_keyfile_name('token.json',scope_app)  # type: ignore
@@ -519,7 +604,7 @@ def get_credentials():
     worksheet = sheet.worksheet(worksheetName)
     data = worksheet.get_all_values()
 
-    return dataProcessing(data, int(periods), start, end)# type: ignore
+    return dataProcessing(data, int(periods), start, end, int(fore))# type: ignore
 
 if __name__ == '__main__':
     app.run(debug=True, port=3000)
