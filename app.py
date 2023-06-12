@@ -337,7 +337,7 @@ def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list
 
     return data_list
 
-def dataProcessing(data, periods, start, end, fore,freq='D'):
+def dataProcessing(data, periods, start, end,freq='D'):
     def pre_Fix_data(data) :
         data = data.replace('', np.nan)
         data = data.replace(['0'], np.nan)
