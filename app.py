@@ -654,7 +654,7 @@ def get_credentials():
     worksheet = sheet.worksheet(worksheetName)
     data = worksheet.get_all_values()
 
-    return dataProcessing(data, int(periods), start, end, int(fore))# type: ignore
+    return dataProcessing(data, int(periods), start, end)# type: ignore
 
 ## API for Forecast
 @app.route('/api/forecast')
