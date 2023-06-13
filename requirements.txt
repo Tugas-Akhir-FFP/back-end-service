@@ -46,7 +46,6 @@ rsa==4.9
 scikit-learn==1.2.1
 scipy==1.10.1
 six==1.16.0
-sklearn==0.0.post1
 statsmodels==0.13.5
 threadpoolctl==3.1.0
 uritemplate==4.1.1
@@ -55,5 +54,6 @@ virtualenv==20.19.0
 virtualenv-clone==0.5.7
 Werkzeug==2.2.3
 scikit-fuzzy==0.4.2
+scikit-learn==1.2.1
 gunicorn
 waitress
