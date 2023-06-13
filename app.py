@@ -15,7 +15,6 @@ from statsmodels.tsa.api import ExponentialSmoothing
 from sklearn.metrics import r2_score
 import skfuzzy as fuzz 
 from skfuzzy import control as ctrl
-import decimal
 from statsmodels.tsa.holtwinters import ExponentialSmoothing 
 
 app = Flask(__name__)
