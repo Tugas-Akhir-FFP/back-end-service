@@ -550,7 +550,7 @@ def ForecastProcessing(data, periods, fore,freq='D'):
     ## Fuzzy Universe
     def fuzzy(value):
         result=[]
-        fwi = ctrl.Antecedent(np.arange(0, 20, 1), 'x') 
+        fwi = ctrl.Antecedent(np.arange(0, 30, 1), 'x') 
         fwi['biru'] = fuzz.trapmf(fwi.universe, [0, 0, 1, 2])
         fwi['hijau'] = fuzz.trapmf(fwi.universe, [1, 2, 6, 7])
         fwi['kuning'] = fuzz.trimf(fwi.universe, [6, 7, 13])
@@ -644,7 +644,6 @@ def get_credentials():
     periods = request.args.get('periods')
     start = request.args.get('start')
     end = request.args.get('end')
-    fore = request.args.get('fore')
     
     scope_app =['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive'] 
     cred = ServiceAccountCredentials.from_json_keyfile_name('token.json',scope_app)  # type: ignore
