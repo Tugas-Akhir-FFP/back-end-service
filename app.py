@@ -16,6 +16,7 @@ from sklearn.metrics import r2_score
 import skfuzzy as fuzz 
 from skfuzzy import control as ctrl
 from statsmodels.tsa.holtwinters import ExponentialSmoothing 
+from scipy import stats
 
 app = Flask(__name__)
 api = Api(app)
@@ -337,12 +338,31 @@ def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list
     return data_list
 
 def dataProcessing(data, periods, start, end,freq='D'):
+    min_val = 0
+    max_val = 0
+    lambda_val = 0.05282858048454572
     def pre_Fix_data(data) :
         data = data.replace('', np.nan)
         data = data.replace(['0'], np.nan)
         data = data.replace(['8888', ''], np.nan)
         data = data.astype(float)
         data = data.fillna(method='ffill').fillna(method='bfill')
+        if(data.columns[0] == 'Rainfall'):
+            array = data.values.flatten()
+            # min max
+            # min_val = min(array)
+            # max_val = max(array)
+            # normalized = (array - min_val) / (max_val - min_val)
+            # denormalized_rainfall = normalized * (max_val - min_val) + min_val
+            # data = pd.DataFrame(normalized.reshape(data.shape), columns=data.columns, index=data.index)
+            # log normalization
+            # normalized = np.log(array)
+            # normalisasi dengan co-boxcox
+            normalized, lmbda = stats.boxcox(array)
+            lambda_val = lmbda
+            print(lambda_val,"lamda")
+            data = pd.DataFrame(normalized.reshape(data.shape), columns=data.columns, index=data.index)
+         
         return data
     
     index = pd.date_range(start, end, freq=freq)
@@ -405,8 +425,18 @@ def dataProcessing(data, periods, start, end,freq='D'):
                 'R2': result['r2']
             }
     })
-
-
+    # print(predict_result, 'predict_result')
+    # ambil objek Rainfall dari predict_result
+    # denormalize Rainfall
+    # print parametes[3]['data']
+    
+    if(predict_result[3]['Rainfall'] != None):
+        array = np.array(parameters[3]['data']['Rainfall'])
+        # denormalized_rainfall = np.exp(array)
+        print(lambda_val)
+        denormalized_rainfall = stats.boxcox(array, lambda_val)
+        # masukan ke predict_result
+        predict_result[3]['Rainfall'] = denormalized_rainfall.tolist()
 
     ## Fuzzy Universe
     def fuzzy(value):
