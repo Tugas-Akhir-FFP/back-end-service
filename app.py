@@ -645,7 +645,7 @@ def ForecastProcessing(data, periods, fore,freq='D'):
 
 
     response = {
-        'Forecast_Result' : forecast_data,
+        'Data_Result' : forecast_data,
     }
     return response
 
