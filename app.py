@@ -16,8 +16,6 @@ from sklearn.metrics import r2_score
 import skfuzzy as fuzz 
 from skfuzzy import control as ctrl
 from statsmodels.tsa.holtwinters import ExponentialSmoothing 
-from scipy import stats
-from scipy.stats import boxcox
 from sklearn.preprocessing import MinMaxScaler
 
 app = Flask(__name__)
@@ -101,19 +99,6 @@ def grid_search(df):
     return predictions.tolist() 
 
 
-# def normalization_minmax(data):
-#     min_val = np.min(data)
-#     max_val = np.max(data)
-#     normalized_data = (data - min_val) / (max_val - min_val)
-#     return normalized_data
-
-# def denormalization_minmax(data, original_data):
-#     min_val = np.min(original_data)
-#     max_val = np.max(original_data)
-#     denormalized_data = data * (max_val - min_val) + min_val
-#     return denormalized_data
-
-
 # Z-Score Standardization
 def z_score(data):
     mean = np.mean(data)
@@ -122,67 +107,11 @@ def z_score(data):
     return z_scores
 
 
-def normalization_boxcox(data):
-    normalized_data = pd.DataFrame()
-    lambda_values = {}
-
-    for column in data.columns:
-        normalized_column, lambda_value = stats.boxcox(data[column])
-        normalized_data[column] = normalized_column
-        lambda_values[column] = lambda_value
-
-    return normalized_data, lambda_values
-
-def denormalization_boxcox(data, lambda_values):
-    denormalized_data = pd.DataFrame()
-
-    for column in data.columns:
-        lambda_value = lambda_values[column]
-        denormalized_column = stats.boxcox(data[column], lambda_value)
-        denormalized_data[column] = denormalized_column
-
-    return denormalized_data
-
 def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, end,data):
     low = df.index.get_loc(start)
     high = df.index.get_loc(end)
 
     train, test = df[1:high], df[low:high]
-
-    # #Test Area
-    # train, test = df.iloc[1:high], df.iloc[low:high]
-    # train = train[1:]
-    # test = test[1:]
-
-    # print(train, "Ini train sebelum")
-    # print(test, "Ini test sebelum")
-
-    # ## Implement normalization
-    # lambda_val = 0.05282858048454572
-    # if df.columns[0] == 'Rainfall':
-    #     train, lambda_values_train = normalization_boxcox(train)
-    #     print(train, "Ini train sebelum")
-
-    #     print(test, "Ini test sebelum")
-    #     test, lambda_values_test = normalization_boxcox(test)
-    #     print(test, "Ini test sesudah")
-    #     # print(train, "Ini train sebelum")
-    # else:
-    #     train = train
-    #     test = test
-    # if df.columns[0] == 'Rainfall':
-
-    #     print(test, "Ini test sebelum")
-    #     # train = normalization_boxcox(train)
-    #     # test = normalization_boxcox(test)
-
-    #     print(test, "Ini train Sesudah")
-    # else:
-    #     train = train
-    #     test = test
-
-    # if df.columns[0] == 'Rainfall':
-    #     print(test, "Ini test sebelum")
 
     model = ExponentialSmoothing(train,
                                 seasonal=seasonal,
@@ -192,85 +121,20 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
                         smoothing_trend=stren, 
                         smoothing_seasonal=sseasonal)
     
-    print(low, high, "ini low high")
     predictions = model_fit.predict(start=low, end= high-1)
-    print(predictions, "Hasil Prediksi")
     predictions = np.array(predictions).flatten().__abs__().round(1)
     test = np.array(test).flatten()
 
 
-    # # # Implement Denormalization
-    # if df.columns[0] == 'Rainfall':
-    #     print(predictions, "Ini Hasil Prediksi")
-    #     predictions_df = pd.DataFrame(predictions, columns=['Rainfall'])
-    #     predictions_denormalized = denormalization_boxcox(predictions_df, lambda_values_train)
-    #     predictions_denormalized = predictions_denormalized.iloc[:,0].values
-
-    #     test_df = pd.DataFrame(test, columns=[df.columns[0]])
-    #     test_denormalized = denormalization_boxcox(test_df, lambda_values_test)
-    #     test_denormalized = test_denormalized.iloc[:, 0].values
-
-    #     print(predictions_denormalized, "Itu apa prediksi sesudah")
-    #     print(test_denormalized, "Itu apa test sesudah")
-    # else:
-    #     predictions_denormalized = predictions
-    #     test_denormalized = test
-
-    
-
-    # # implement denormalization z-score
-    # if df.columns[0] == 'Rainfall':
-    #     z_predictions = denormalization_zscore(predictions, train)
-    #     z_test = denormalization_zscore(test, train)
-    #     print(z_test, "Ini test sebelum")
-    #     print(z_predictions, "Ini prediksi sebelum")
-    # else:
-    #     z_predictions = predictions
-    #     z_test = test
-
     ## Implement Z-score
     z_predictions = z_score(predictions)
     z_test = z_score(test)
-
-    # # Implement Denormalization Boxcox
-    # if df.columns[0] == 'Rainfall':
-    #     array = np.array(data['Rainfall'])
-    #     denormalized_predictions = stats.boxcox(predictions, lambda_val)
-    #     denormalized_test = stats.boxcox(test, lambda_val)
-    # else:
-    #     denormalized_predictions = predictions
-    #     denormalized_test = test
-    # if df.columns[0] == 'Rainfall':
-    #     print(predictions, "Ini Hasil Prediksi")
-    # ## Apply min-max denormalization
-    # if df.columns[0] == 'Rainfall':
-    #     print(predictions, "Ini prediksi sebelum")
-    #     predictions_result = denormalization_minmax(predictions, df['Rainfall'])
-    #     print(predictions_result, "Ini prediksi sesudah")
-    #     predictions = predictions_result
-    # else:
-    #     predictions_result = predictions
-
-    ## Implement normalization minMax
-    # if df.columns[0] == 'Temperature':
-    #     #normalization predict result
-    #     predictions_result = normalization_minmax(predictions)
-    #     test = normalization_minmax(test)
-    # else :
-    #     predictions_result = predictions
-
-    # mse = np.square(np.subtract(test,predictions_result)).mean()
-    # r2 = r2_score(test, predictions_result)
 
     mae = np.mean(np.abs(z_predictions - z_test))
     mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
     mse = np.square(np.subtract(z_test,z_predictions)).mean()
     r2 = r2_score(z_test, z_predictions)
 
-    # mae = np.mean(np.abs(denormalized_predictions - denormalized_test))
-    # mape = np.mean(np.abs(denormalized_predictions - denormalized_test)/np.abs(denormalized_test))
-    # mse = np.square(np.subtract(denormalized_test,denormalized_predictions)).mean()
-    # r2 = r2_score(denormalized_test, denormalized_predictions)
     rmse = math.sqrt(mse)
     return {
         'predictions' : predictions.tolist(),
@@ -298,8 +162,7 @@ def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
     forecast = np.array(forecast).flatten().astype(int)
     return forecast.tolist()
 
-def fwiCalculation(Temp, rh, wind, rainfall):
-    
+def fwiCalculation(Temp, rh, wind, rainfall): 
     fwi_VALUE = []
     bui_VALUE = []
     isi_VALUE = []
@@ -390,6 +253,8 @@ def fwiCalculation(Temp, rh, wind, rainfall):
             #MRT Section
             wmr = wmi + 1000 * rw / (48.77 + b * rw)
             pr = 244.72-43.43 * math.log(wmr - 20.0)
+            if pr < 0.0:
+                pr = 0.0
             dmc = pr + 100.0 * mth
             
         else:
@@ -439,8 +304,6 @@ def fwiCalculation(Temp, rh, wind, rainfall):
         Fu = math.exp(0.05039 * windkmh)
         Ff = 91.9 * math.exp(-0.1386 * mFuel) * (1.0 + (mFuel ** 5.31) / (4.93 * (10 ** 7)))
         isi = Ff * Fu* 0.208
-
-
 
         ## FWI  SECTION
         if bui <= 80.0:
@@ -500,23 +363,7 @@ def dataProcessing(data, periods, start, end,freq='D'):
         data = data.replace(['0'], np.nan)
         data = data.replace(['8888', ''], np.nan)
         data = data.astype(float)
-        data = data.fillna(method='ffill').fillna(method='bfill')
-        # if(data.columns[0] == 'Rainfall'):
-        #     array = data.values.flatten()
-        #     # min max
-        #     # min_val = min(array)
-        #     # max_val = max(array)
-        #     # normalized = (array - min_val) / (max_val - min_val)
-        #     # denormalized_rainfall = normalized * (max_val - min_val) + min_val
-        #     # data = pd.DataFrame(normalized.reshape(data.shape), columns=data.columns, index=data.index)
-        #     # log normalization
-        #     # normalized = np.log(array)
-        #     # normalisasi dengan co-boxcox
-        #     normalized, lmbda = stats.boxcox(array)
-        #     lambda_val = lmbda
-        #     print(lambda_val,"lamda")
-        #     data = pd.DataFrame(normalized.reshape(data.shape), columns=data.columns, index=data.index)
-         
+        data = data.fillna(method='ffill').fillna(method='bfill')      
         return data
     
     index = pd.date_range(start, end, freq=freq)
@@ -547,21 +394,6 @@ def dataProcessing(data, periods, start, end,freq='D'):
 
         globals()[f'{param_name.lower()}_list'] = param_list
 
-    # date_list = df_filtered['Date'].tolist()
-
-    # Grid Search
-    # #show Rainfall data
-    # print("--------- Rainfall Data ---------")
-    # print(parameters[3]['data'])
-
-    # # Grid Search for rainfall
-    # Rainfall_grid = grid_search(parameters[3]['data'])
-
-    # # Show grid Result
-    # print("--------- Grid Search Result ---------")
-    # print("Rainfall SECTION")
-    # print(Rainfall_grid)
-
     predict_result = []
     error_result = []
     # date list from start to end
@@ -586,18 +418,6 @@ def dataProcessing(data, periods, start, end,freq='D'):
                 'R2': result['r2']
             }
     })
-    # print(predict_result, 'predict_result')
-    # ambil objek Rainfall dari predict_result
-    # denormalize Rainfall
-    # print parametes[3]['data']
-    
-    # if(predict_result[3]['Rainfall'] != None):
-    #     array = np.array(parameters[3]['data']['Rainfall'])
-    #     # denormalized_rainfall = np.exp(array)
-    #     print(lambda_val)
-    #     denormalized_rainfall = stats.boxcox(array, lambda_val)
-    #     # masukan ke predict_result
-    #     predict_result[3]['Rainfall'] = denormalized_rainfall.tolist()
 
     ## Fuzzy Universe
     def fuzzy(value):
