@@ -134,8 +134,8 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
     mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
     mse = np.square(np.subtract(z_test,z_predictions)).mean()
     r2 = r2_score(z_test, z_predictions)
-
     rmse = math.sqrt(mse)
+    
     return {
         'predictions' : predictions.tolist(),
         'mape' : mape,
@@ -159,7 +159,7 @@ def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
                         smoothing_seasonal=sseasonal)
     
     forecast = model_fit.forecast(steps=fore)
-    forecast = np.array(forecast).flatten().astype(int)
+    forecast = np.array(forecast).flatten().__abs__().round(1)
     return forecast.tolist()
 
 def fwiCalculation(Temp, rh, wind, rainfall): 
@@ -367,7 +367,10 @@ def dataProcessing(data, periods, start, end,freq='D'):
         return data
     
     index = pd.date_range(start, end, freq=freq)
+    print("Hasil Dataframe")
     df = pd.DataFrame(data)
+    #print 10 data from dataframe
+    print(df.head(10))
     df.columns = df.iloc[0]
     df = df[:-periods]
     df = df.rename(columns={'Tanggal':'Date','Tx':'Temperature','RH_avg':'Humidity','ff_x':'Wind','RR':'Rainfall'})
