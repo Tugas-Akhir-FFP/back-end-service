@@ -106,6 +106,37 @@ def z_score(data):
     z_scores = (data - mean) / std
     return z_scores
 
+# def Test_kalkulasi():
+#     x = [1.4, 1.0, 1.0, 0.8, 0.8, 0.8, 1.0]
+#     test = [3.2, 0.8, 0.8, 0.8, 0.8, 0.8, 1.0]
+
+#     x = np.array(x).flatten()
+#     test = np.array(test).flatten()
+
+#     print("TYestees Pessss")
+#     print(x)
+#     print(test)
+#     z_predictions = z_score(x)
+#     print(z_predictions)
+#     z_test = z_score(test)
+#     print(z_test)
+#     # z_predictions = x
+#     # z_test = test
+
+#     mae = np.mean(np.abs(z_predictions - z_test))
+#     mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
+#     mse = np.square(np.subtract(z_test,z_predictions)).mean()
+#     r2 = r2_score(z_test, z_predictions)
+#     rmse = math.sqrt(mse)
+
+#     print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
+#     print(r2,'r2')
+#     print(mse,'mse')
+#     print(rmse,'rmse')
+#     print(mape,'mape')
+#     print(mae,'mae')
+
+
 
 def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, end,data):
     low = df.index.get_loc(start)
@@ -125,7 +156,6 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
     predictions = np.array(predictions).flatten().__abs__().round(1)
     test = np.array(test).flatten()
 
-
     ## Implement Z-score
     z_predictions = z_score(predictions)
     z_test = z_score(test)
@@ -135,7 +165,7 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
     mse = np.square(np.subtract(z_test,z_predictions)).mean()
     r2 = r2_score(z_test, z_predictions)
     rmse = math.sqrt(mse)
-    
+
     return {
         'predictions' : predictions.tolist(),
         'mape' : mape,
@@ -148,7 +178,7 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
 
 def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
     high = df.index.get_loc(end)
-    train = df[1:high]
+    train = df[0:high]
 
     model = ExponentialSmoothing(train,
                                 seasonal=seasonal,
@@ -215,7 +245,7 @@ def fwiCalculation(Temp, rh, wind, rainfall):
             if mo < Ew:
                 k1 = 0.424 * (1.0 - (1.0 - current_rh / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (1.0 - current_rh / 100.0) ** 8)
                 kw = k1 * (0.581 * math.exp(0.0365 * current_temp))
-                m = Ew - (Ew - mo) * math.exp(-kw)
+                m = Ew - (Ew - mo) * math.exp(-kw)          
             else:
                 m = mo
 
@@ -338,10 +368,10 @@ def fwiCalculation(Temp, rh, wind, rainfall):
 
 def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list):
     # ## NOTEEE : Data dari canada, rumus windkmh dari line 175 ( windkmh = current_wind)
-    # temperature_list = [30,30,30,30,30,30,30]
-    # humidity_list = [87,87,87,87,87,87,87]
-    # wind_list = [3,3,3,3,3,3,3]
-    # rainfall_list = [2,1,0,0,1,1,2]
+    # temperature_list = [30.3, 28.6, 29.4, 29.6, 28.7, 28.5, 28.0]
+    # humidity_list = [74, 70, 67, 58, 70, 72, 74]
+    # rainfall_list = [3.2, 0.8, 0.8, 0.8, 0.8, 0.8, 1]
+    # wind_list = [3, 4, 3, 4, 3, 3, 3]
     data_list = []
 
     ffmc_list, dmc_list, dc_list, bui_list, isi_list, fwi_list = fwiCalculation(temperature_list, humidity_list, wind_list, rainfall_list)
@@ -367,10 +397,7 @@ def dataProcessing(data, periods, start, end,freq='D'):
         return data
     
     index = pd.date_range(start, end, freq=freq)
-    print("Hasil Dataframe")
     df = pd.DataFrame(data)
-    #print 10 data from dataframe
-    print(df.head(10))
     df.columns = df.iloc[0]
     df = df[:-periods]
     df = df.rename(columns={'Tanggal':'Date','Tx':'Temperature','RH_avg':'Humidity','ff_x':'Wind','RR':'Rainfall'})
@@ -392,7 +419,7 @@ def dataProcessing(data, periods, start, end,freq='D'):
             'name': param_name,
             'data': param_data,
             'trend': None if param_name in ['Temperature','Humidity'] else 'multiplicative' if param_name == 'Wind' else 'additive' if param_name == 'Rainfall' else None,
-            'seasonal': None
+            'seasonal': None,
         })
 
         globals()[f'{param_name.lower()}_list'] = param_list
@@ -535,6 +562,9 @@ def ForecastProcessing(data, periods, fore,freq='D'):
     for param_name in parameters_names : 
         param_data = df[['Date', param_name]].set_index('Date')
         param_data = pre_Fix_data(param_data).resample('D').mean()
+    
+        #print 7 data last from param_data
+        print(param_data.tail(7))
         param_list = param_data[param_name].tolist()
 
         parameters.append({
