@@ -469,6 +469,7 @@ def dataProcessing(data, periods, start, end,freq='D'):
         fwi_level_kuning = fuzz.interp_membership(fwi.universe, fwi['kuning'].mf, value)
         fwi_level_merah = fuzz.interp_membership(fwi.universe, fwi['merah'].mf, value)
         result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah]
+        
         plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
         plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
         plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
@@ -611,6 +612,7 @@ def ForecastProcessing(data, periods, fore,freq='D'):
         fwi_level_kuning = fuzz.interp_membership(fwi.universe, fwi['kuning'].mf, value)
         fwi_level_merah = fuzz.interp_membership(fwi.universe, fwi['merah'].mf, value)
         result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah]
+        
         plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
         plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
         plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
