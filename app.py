@@ -652,7 +652,7 @@ def ForecastProcessing(data, periods, fore,freq='D'):
     for i in range(len(forecast_result[0]['Temperature'])):
         result = {
             'Date': date_fore[i],
-            'Forecast': {
+            'Prediction': {
                 'Temp': forecast_result[0]['Temperature'][i],
                 'Humidity': forecast_result[1]['Humidity'][i],
                 'Wind': forecast_result[2]['Wind'][i],
@@ -675,7 +675,7 @@ def ForecastProcessing(data, periods, fore,freq='D'):
 
 
     response = {
-        'Forecast_Result' : forecast_data,
+        'Data_Result' : forecast_data,
     }
     return response
 
