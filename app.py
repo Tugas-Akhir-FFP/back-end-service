@@ -164,6 +164,8 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
     mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
     mse = np.square(np.subtract(z_test,z_predictions)).mean()
     r2 = r2_score(z_test, z_predictions)
+    print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
+    print(r2,'r2')
     rmse = math.sqrt(mse)
 
     return {
@@ -219,6 +221,8 @@ def fwiCalculation(Temp, rh, wind, rainfall):
         current_wind = wind[i]
         current_rainfall = rainfall[i]
         #convert wind from m/s to km/h
+        if current_wind > 10 : 
+            current_wind = 10
         windkmh = current_wind * 3.6
 
 
@@ -334,6 +338,8 @@ def fwiCalculation(Temp, rh, wind, rainfall):
         Fu = math.exp(0.05039 * windkmh)
         Ff = 91.9 * math.exp(-0.1386 * mFuel) * (1.0 + (mFuel ** 5.31) / (4.93 * (10 ** 7)))
         isi = Ff * Fu* 0.208
+
+        print("isi : ", isi)
 
         ## FWI  SECTION
         if bui <= 80.0:
