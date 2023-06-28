@@ -462,7 +462,17 @@ def dataProcessing(data, periods, start, end,freq='D'):
         fwi_level_hijau = fuzz.interp_membership(fwi.universe, fwi['hijau'].mf, value)
         fwi_level_kuning = fuzz.interp_membership(fwi.universe, fwi['kuning'].mf, value)
         fwi_level_merah = fuzz.interp_membership(fwi.universe, fwi['merah'].mf, value)
-        result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah]
+        # rule
+        
+        # buatkan saya defuzzifikasi dari hasil fuzzyfikasi
+        centeroid_biru = fuzz.defuzz(fwi.universe, fwi['biru'].mf, 'centroid')
+        centeroid_hijau = fuzz.defuzz(fwi.universe, fwi['hijau'].mf, 'centroid')
+        centeroid_kuning = fuzz.defuzz(fwi.universe, fwi['kuning'].mf, 'centroid')
+        centeroid_merah = fuzz.defuzz(fwi.universe, fwi['merah'].mf, 'centroid')
+        
+        defuzzifikasi = (centeroid_biru * fwi_level_biru + centeroid_hijau * fwi_level_hijau + centeroid_kuning * fwi_level_kuning + centeroid_merah * fwi_level_merah) / (fwi_level_biru + fwi_level_hijau + fwi_level_kuning + fwi_level_merah)
+        result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah, defuzzifikasi]
+        
         plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
         plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
         plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
@@ -604,7 +614,15 @@ def ForecastProcessing(data, periods, fore,freq='D'):
         fwi_level_hijau = fuzz.interp_membership(fwi.universe, fwi['hijau'].mf, value)
         fwi_level_kuning = fuzz.interp_membership(fwi.universe, fwi['kuning'].mf, value)
         fwi_level_merah = fuzz.interp_membership(fwi.universe, fwi['merah'].mf, value)
-        result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah]
+         # buatkan saya defuzzifikasi dari hasil fuzzyfikasi
+        centeroid_biru = fuzz.defuzz(fwi.universe, fwi['biru'].mf, 'centroid')
+        centeroid_hijau = fuzz.defuzz(fwi.universe, fwi['hijau'].mf, 'centroid')
+        centeroid_kuning = fuzz.defuzz(fwi.universe, fwi['kuning'].mf, 'centroid')
+        centeroid_merah = fuzz.defuzz(fwi.universe, fwi['merah'].mf, 'centroid')
+        
+        defuzzifikasi = (centeroid_biru * fwi_level_biru + centeroid_hijau * fwi_level_hijau + centeroid_kuning * fwi_level_kuning + centeroid_merah * fwi_level_merah) / (fwi_level_biru + fwi_level_hijau + fwi_level_kuning + fwi_level_merah)
+        result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah, defuzzifikasi]
+        
         plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
         plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
         plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
