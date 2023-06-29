@@ -1,0 +1,42 @@
+name: Trigger auto deployment for ffpfe
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ develop ]
+    paths:
+    - '**'
+    - '.github/workflows/ffpfe-AutoDeployTrigger-b16b6887-44fe-4e24-9aec-0109cea1ed62.yml'
+
+  # Allow mannually trigger 
+  workflow_dispatch:
+      
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.FFPFE_AZURE_CREDENTIALS }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: frontendserviceffp.azurecr.io
+          registryUsername: ${{ secrets.FFPFE_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.FFPFE_REGISTRY_PASSWORD }}
+          containerAppName: ffpfe
+          resourceGroup: Bebas
+          imageToBuild: frontendserviceffp.azurecr.io/ffpfe:${{ github.sha }}
+          
+
+     
+
