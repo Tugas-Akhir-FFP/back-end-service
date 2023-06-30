@@ -20,7 +20,7 @@ spec:
         image: registry.gitlab.com/agustio719/back-end-service/develop:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 3001
+        - containerPort: 3010
         resources:
           limits:
             cpu: 400m
