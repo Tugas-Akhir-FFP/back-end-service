@@ -32,4 +32,4 @@ deploy:
   script:
   - ls
   - kubectl apply -f $CI_PROJECT_DIR/manifest/. -n gaboot --validate=false
-  - kubectl rollout restart deployment/be-single-service -n gaboot
+  - kubectl rollout restart deployment/be-ff-tio
