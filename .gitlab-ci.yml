@@ -1,0 +1,38 @@
+stages:
+- build
+- deploy
+
+variables:
+  TAG_LATEST: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:latest
+  TAG_COMMIT: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
+  KUBE_CONTEXT: "agustio719/back-end-service:adaptive-cluster-cok"
+
+.kube-context:
+  before_script:
+  - if [ -n "$KUBE_CONTEXT" ]; then kubectl config use-context "$KUBE_CONTEXT"; fi
+
+build:
+  stage: build
+  image: docker:latest
+  services:
+  - docker:dind
+  script:
+  - docker build -t $TAG_LATEST .
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  - docker push $TAG_LATEST
+  only:
+  - develop
+
+
+deploy:
+  stage: deploy
+  extends: [.kube-context]
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  script:
+  - ls
+  - kubectl apply -f $CI_PROJECT_DIR/manifest/. -n gaboot --validate=false
+  - kubectl rollout restart deployment/be-ff-tio -n gaboot
