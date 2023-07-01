@@ -114,7 +114,6 @@ def z_score(data):
     mean = np.mean(data)
     std = np.std(data)
     z_scores = (data - mean) / std
-    print("Z-Score : ",z_scores)
     return z_scores
 
 # def Test_kalkulasi():
@@ -168,21 +167,12 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
     test = np.array(test).flatten()
 
     ## Implement Z-score
-    print("-------- Kalkulasi hasil Prediksi------------")
-    print(predictions)
-    print(test)
     z_predictions = z_score(predictions)
     z_test = z_score(test)
-    print("-------- Kalkulasi hasil Prediksi Z-Score------------")
-    print(z_predictions)
-    print(z_test)
-
     mae = np.mean(np.abs(z_predictions - z_test))
     mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
     mse = np.square(np.subtract(z_test,z_predictions)).mean()
     r2 = r2_score(z_test, z_predictions)
-    print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
-    print(r2,'r2')
     rmse = math.sqrt(mse)
 
     return {
@@ -355,8 +345,6 @@ def fwiCalculation(Temp, rh, wind, rainfall):
         Fu = math.exp(0.05039 * windkmh)
         Ff = 91.9 * math.exp(-0.1386 * mFuel) * (1.0 + (mFuel ** 5.31) / (4.93 * (10 ** 7)))
         isi = Ff * Fu* 0.208
-
-        print("isi : ", isi)
 
         ## FWI  SECTION
         if bui <= 80.0:
