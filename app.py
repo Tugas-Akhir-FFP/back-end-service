@@ -101,9 +101,20 @@ def grid_search(df):
 
 # Z-Score Standardization
 def z_score(data):
+    #create conditional for same value
+    unique_values, value_counts = np.unique(data, return_counts=True)
+    if np.all(value_counts > 1):
+        # Add 0.1 to every other occurrence of the duplicate values
+        add_value = 0.1
+        for value in unique_values:
+            duplicate_indices = np.where(data == value)[0]
+            for i in range(len(duplicate_indices)):
+                data[duplicate_indices[i]] += (i % 2) * add_value
+
     mean = np.mean(data)
     std = np.std(data)
     z_scores = (data - mean) / std
+    print("Z-Score : ",z_scores)
     return z_scores
 
 # def Test_kalkulasi():
@@ -157,8 +168,14 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
     test = np.array(test).flatten()
 
     ## Implement Z-score
+    print("-------- Kalkulasi hasil Prediksi------------")
+    print(predictions)
+    print(test)
     z_predictions = z_score(predictions)
     z_test = z_score(test)
+    print("-------- Kalkulasi hasil Prediksi Z-Score------------")
+    print(z_predictions)
+    print(z_test)
 
     mae = np.mean(np.abs(z_predictions - z_test))
     mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
