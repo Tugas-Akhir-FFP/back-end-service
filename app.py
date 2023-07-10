@@ -36,11 +36,16 @@ def grid_search(df):
     #Kotawaringin df[1:1451], df[1451:1471]
     # #Sidoarjo df[1:2439], df[2439:2459]wewewew
     # train, test = df[1:high], df[low:high]
-    train = df[0:1608]
-    test = [91, 91, 91, 87, 97, 90, 87]
-    print(len(train))
-    print(len(test))
-    fore = 7
+    mid = 1630
+    low = 1601
+    high = 1607
+
+    train = df[0:mid]
+    test = [1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0]
+
+    data = train.values
+    x = z_score(data)
+    # fore = 7
     results = []
     for seasonal in param_grid['seasonal']:
         for trend in param_grid['trend']:
@@ -60,7 +65,11 @@ def grid_search(df):
                                 # predictions = model_fit.predict(start=len(train), end = len(train)+len(test)-1)
 
                                 #create predict 20 data
-                                predictions = model_fit.predict(start=len(train), end = len(train)+fore-1)
+                                #predict sama as data test
+                                predictions = model_fit.forecast(steps=7)
+                                predictions = z_score_DeStandardization(predictions, data)
+                                predictions = np.array(predictions).flatten().__abs__().round(1)
+    
                                 # test = z_score(test)
                                 # predictions = z_score(predictions)
                                 print(predictions, "Ini hasil forecastnya bwang : ")
@@ -68,7 +77,7 @@ def grid_search(df):
                                 
                                 mse = mean_squared_error(test, predictions)
                                 rmse = math.sqrt(mse)
-                                results.append((trend,seasonal, seasonal_period, smoothing_level, smoothing_trend, smoothing_seasonal,r2))
+                                results.append((seasonal,trend, seasonal_period, smoothing_level, smoothing_trend, smoothing_seasonal,r2))
                             except:
                                 print('error')
     
@@ -81,36 +90,35 @@ def grid_search(df):
     model_fit = model.fit(smoothing_level=best_params[3], 
                           smoothing_trend=best_params[4], 
                           smoothing_seasonal=best_params[5])
-    predictions = model_fit.predict(start=len(train), end = len(train)+fore-1)
+    predictions = model_fit.forecast(steps=7)
     #change prediction value round to 2 decimal
     predictions = np.array(predictions).flatten().__abs__().round(1)
     test = np.array(test).flatten()
 
-    predictions = z_score(predictions)
-    test = z_score(test)
-
     mse = np.square(np.subtract(test,predictions)).mean()
     r2 = r2_score(test, predictions)
     rmse = math.sqrt(mse)
-    mape = np.mean((np.abs(predictions - test)/np.abs(test))* 100)
+    # mape = np.mean((np.abs(predictions - test)/np.abs(test))* 100)
     hasil = {}
     hasil['Hasil'] = predictions.tolist()  
     print("-------- Kalkulasi hasil Grid Forecast------------") 
     print(r2,'r2')
     print(mse,'mse')
     print(rmse,'rmse')
-    print(mape,'mape')
+    # print(mape,'mape')
 
     print("========== HASIL UNTUK PARAMETER TERBAIK ==========")
     print(best_params,"best param")
-    print("HASIL Prediksi : " ,predictions)
+    print("HASIL Prediksi : " ,best_params)
     print("Data Test : " ,test)
     return predictions.tolist() 
 
-
 # Z-Score Standardization
 def z_score(data):
-    #create conditional for same value
+    # Create a copy of the data to avoid modifying the original array
+    data = np.copy(data)
+
+    # Create conditional for same value
     unique_values, value_counts = np.unique(data, return_counts=True)
     if np.all(value_counts > 1):
         # Add 0.1 to every other occurrence of the duplicate values
@@ -123,27 +131,62 @@ def z_score(data):
     mean = np.mean(data)
     std = np.std(data)
     z_scores = (data - mean) / std
+
+    # Scale z-scores to 0-1
+    min_z = np.min(z_scores)
+    max_z = np.max(z_scores)
+    scaled_z = (z_scores - min_z) / (max_z - min_z)
+    return scaled_z
+
+def z_score_DeStandardization(data, original_data):
+    # Create a copy of the data to avoid modifying the original array
+    data = np.copy(data)
+
+    # Create conditional for same value
+    unique_values, value_counts = np.unique(original_data, return_counts=True)
+    if np.all(value_counts > 1):
+        # Add 0.1 to every other occurrence of the duplicate values
+        add_value = 0.1
+        for value in unique_values:
+            duplicate_indices = np.where(original_data == value)[0]
+            for i in range(len(duplicate_indices)):
+                original_data[duplicate_indices[i]] += (i % 2) * add_value
+
+    mean = np.mean(original_data)
+    std = np.std(original_data)
+    z_scores = (data * std) + mean
     return z_scores
 
 def Test_kalkulasi():
-    x = [31, 31 ,31 ,31 ,32 ,31 ,33 ,32, 32 ,32 ,32 ,32 ,32, 32 ,32 ,32, 32, 32 ,33, 33 ,33, 33, 32, 33 ,33 ,33 ,33, 33, 33 ,33]
-    test = [31, 33, 32 ,33 ,26, 33, 33, 31, 33,32 ,30 ,32 ,33 ,33 ,33 ,32, 33, 32, 34 ,34, 34 ,35, 30 ,34 ,34, 34 ,34, 34 ,34 ,33]
+    x = [26.0, 26.4, 26.7, 27.1, 27.5, 27.9, 28.2]
+    test = [1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0]
 
     x = np.array(x).flatten()
     test = np.array(test).flatten()
 
-#     print("TYestees Pessss")
-#     print(x)
-#     print(test)
+    # z_predictions = x
+    # z_test = test
+    
+
     z_predictions = z_score(x)
-    print(z_predictions)
     z_test = z_score(test)
+    print(z_predictions)
     print(z_test)
-#     # z_predictions = x
-#     # z_test = test
+
+    y = z_score_DeStandardization(z_predictions, x)
+    print(y, "ini hasilnya denormalisasi")
+    a = z_score_DeStandardization(z_test, test)
+    print(a, "ini hasilnya denormalisasi")
+    # print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
+    # print(z_predictions)
+    # print(z_test)
 
     mae = np.mean(np.abs(z_predictions - z_test))
-    mape = np.mean((np.abs(z_predictions - z_test)/np.abs(z_test))* 100)
+
+    #create mape x100% to get percentage value
+    mape = np.mean((np.abs(z_predictions - z_test)/np.abs(test))* 100)
+
+    # mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
     mse = np.square(np.subtract(z_test,z_predictions)).mean()
     r2 = r2_score(z_test, z_predictions)
     rmse = math.sqrt(mse)
@@ -154,8 +197,6 @@ def Test_kalkulasi():
     print(rmse,'rmse')
     print(mape,'mape')
     print(mae,'mae')
-
-
 
 def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, end):
     low = df.index.get_loc(start)
@@ -213,15 +254,21 @@ def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
     high = df.index.get_loc(end)
     train = df[0:high]
 
-    model = ExponentialSmoothing(train,
+    # implement z-score for train data
+    data = train.values
+    x = z_score(data)
+    model = ExponentialSmoothing(x,
                                 seasonal=seasonal,
                                 trend=trend,
                                 seasonal_periods=periods)
     model_fit = model.fit(smoothing_level=slevel, 
                         smoothing_trend=stren, 
                         smoothing_seasonal=sseasonal)
-    
+    # Forecast data z-score
     forecast = model_fit.forecast(steps=fore)
+    #  z-score destandardization for forecast data
+    forecast = z_score_DeStandardization(forecast, data)
+
     forecast = np.array(forecast).flatten().__abs__().round(1)
     return forecast.tolist()
 
@@ -418,10 +465,10 @@ def fwiCalculation(Temp, rh, wind, rainfall):
 
 def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list):
     # ## NOTEEE : Data dari canada, rumus windkmh dari line 175 ( windkmh = current_wind)
-    # temperature_list = [30.3, 28.6, 29.4, 29.6, 28.7, 28.5, 28.0]
-    # humidity_list = [74, 70, 67, 58, 70, 72, 74]
-    # rainfall_list = [3.2, 0.8, 0.8, 0.8, 0.8, 0.8, 1]
-    # wind_list = [3, 4, 3, 4, 3, 3, 3]
+    # temperature_list = [34.4, 34.4, 34.4, 34.0, 34.0, 34.0, 33.0]
+    # humidity_list = [81.0, 80.0, 81.0, 89.0, 85.0, 82.0, 88.0]
+    # rainfall_list = [0.2, 0.2, 0.2, 0.2, 31.9, 31.9, 7.7]
+    # wind_list = [3.0, 4.0, 4.0, 7.0, 5.0, 7.0, 4.0]
     data_list = []
 
     ffmc_list, dmc_list, dc_list, bui_list, isi_list, fwi_list = fwiCalculation(temperature_list, humidity_list, wind_list, rainfall_list)
@@ -629,7 +676,6 @@ def dataProcessing(data, periods, start, end,freq='D'):
     }
     return response
 
-
 ## Data processing for forecast
 
 def ForecastProcessing(data, periods, fore,freq='D'):
@@ -660,144 +706,45 @@ def ForecastProcessing(data, periods, fore,freq='D'):
         param_data = pre_Fix_data(param_data).resample('D').mean()
     
         #print 7 data last from param_data
-        if param_name == 'Rainfall' :
-            print("Data parameter")
-            print(param_data.tail(30))
+        
+        # print("Data parameter")
+        # print(param_data.tail(7))
+        # Test_kalkulasi()
         param_list = param_data[param_name].tolist()
 
-        #conditional argument for parameter
+        # #conditional argument Property for parameter
         if param_name == 'Temperature' :
-             # #do grid search using temperature data
-            # print("Grid Search")
-            # print(param_data)
-            # grid_search(param_data) 
-            if 0 < fore <= 7 : 
-                x = None
-                y = None
-                period = 12
-                alpha = 0.6
-                beta = 0.9
-                gamma = 0.5
-            elif 7 < fore <=14 :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.8
-                beta = 0.4
-                gamma = 0.3
-            elif 14 < fore <= 21 :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.9
-                beta = 0.3
-                gamma = 0.6
-            else :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.9
-                beta = 0.3
-                gamma = 0.6
-
-           
+            x = 'additive'
+            y = 'additive'
+            period = 4
+            alpha = 0.3
+            beta = 0.3
+            gamma = 0.3  
         elif param_name == 'Humidity' :
-            print("Grid Search")
-            print(param_data)
-            grid_search(param_data) 
-            if 0 < fore <= 7 : 
-                x = None
-                y = None
-                period = 4
-                alpha = 0.8
-                beta = 0.8
-                gamma = 0.6
-            elif 7 < fore <=14 :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.4
-                beta = 0.8
-                gamma = 0.1
-            elif 14 < fore <= 21 :
-                x =None
-                y = None
-                period = 12
-                alpha = 0.9
-                beta = 0.6
-                gamma = 0.2
-            else :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.7
-                beta = 0.9
-                gamma = 0.6
+            x = 'additive'
+            y = None
+            period = 4
+            alpha = 0.9
+            beta = 0.1
+            gamma = 0.1      
 
         elif param_name == 'Wind' :
-            # print("Grid Search")
-            # print(param_data)
-            # grid_search(param_data) 
-            if 0 < fore <= 7 : 
-                x =None
-                y = None
-                period = 12
-                alpha = 0.6
-                beta = 0.8
-                gamma = 0.4
-            elif 7 < fore <=14 :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.5
-                beta = 0.4
-                gamma = 0.2
-            elif 14 < fore <= 21 :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.7
-                beta = 0.9
-                gamma = 0.8
-            else :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.6
-                beta = 0.7
-                gamma = 0.9
+            x = 'additive'
+            y = 'additive'
+            period = 4
+            alpha = 0.3
+            beta = 0.3
+            gamma = 0.3
         else :
-            # print("Grid Search")
-            # print(param_data)
-            # grid_search(param_data) 
-            if 0 < fore <= 7 : 
-                x = None
-                y = None
-                period = 12
-                alpha = 0.4
-                beta = 0.9
-                gamma = 0.3
-            elif 7 < fore <=14 :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.4
-                beta = 0.4
-                gamma = 0.2
-            elif 14 < fore <= 21 :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.9
-                beta = 0.2
-                gamma = 0.6
-            else :
-                x = None
-                y = None
-                period = 12
-                alpha = 0.9
-                beta = 0.2
-                gamma = 0.6
+            x = 'additive'
+            y = 'additive'
+            period = 4
+            alpha = 0.3
+            beta = 0.3
+            gamma = 0.3
+
+            #'additive'zz
+            #'multiplicative'
 
         parameters.append({
             'name': param_name,
@@ -825,6 +772,7 @@ def ForecastProcessing(data, periods, fore,freq='D'):
     # Looping for prediction
     for param in parameters:
         forecast = Forecast(param['data'], param['seasonal'], param['trend'],param['periode'],param['alpha'] ,param['beta'], param['gamma'], last_date,fore)
+        # forecast = Forecast(param['data'], 'additive', 'additive', 4, 0.3, 0.3, 0.3, last_date, fore)
         # Test_kalkulasi()
         forecast_result.append({param['name']: forecast})
 
