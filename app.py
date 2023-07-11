@@ -115,20 +115,6 @@ def grid_search(df):
     print("Data Test : " ,test)
     return predictions.tolist() 
 
-
-# def normalization_minmax(data):
-#     min_val = np.min(data)
-#     max_val = np.max(data)
-#     normalized_data = (data - min_val) / (max_val - min_val)
-#     return normalized_data
-
-# def denormalization_minmax(data, original_data):
-#     min_val = np.min(original_data)
-#     max_val = np.max(original_data)
-#     denormalized_data = data * (max_val - min_val) + min_val
-#     return denormalized_data
-
-
 # Z-Score Standardization
 def z_score(data):
     # Create a copy of the data to avoid modifying the original array
@@ -176,43 +162,6 @@ def z_score_DeStandardization(data, original_data):
 def Test_kalkulasi():
     x = [0.9, 0.6, 0.7, 2.5, 0.9, 0.6, 0.7]
     test = [1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0]
-
-    x = np.array(x).flatten()
-    test = np.array(test).flatten()
-
-    z_predictions = x
-    z_test = test
-    
-
-    # z_predictions = z_score(x)
-    # z_test = z_score(test)
-    # print(z_predictions)
-    # print(z_test)
-
-    # y = z_score_DeStandardization(z_predictions, x)
-    # print(y, "ini hasilnya denormalisasi")
-    # a = z_score_DeStandardization(z_test, test)
-    # print(a, "ini hasilnya denormalisasi")
-    # # print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
-    # # print(z_predictions)
-    # # print(z_test)
-
-    mae = np.mean(np.abs(z_predictions - z_test))
-
-    #create mape x100% to get percentage value
-    mape = np.mean((np.abs(z_predictions - z_test)/np.abs(test))* 100)
-
-    # mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
-    mse = np.square(np.subtract(z_test,z_predictions)).mean()
-    r2 = r2_score(z_test, z_predictions)
-    rmse = math.sqrt(mse)
-
-    print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
-    print(r2,'r2')
-    print(mse,'mse')
-    print(rmse,'rmse')
-    print(mape,'mape')
-    print(mae,'mae')
 
 def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, end):
     low = df.index.get_loc(start)
@@ -269,40 +218,6 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
     predictions = np.array(predictions).flatten().__abs__().round(1)
     test = np.array(test).flatten()
 
-    
-    # print("-------- Prediksi HEHEHEE------------")
-    # print(predictions)
-    # print(test)
-
-
-    # # # Implement Denormalization
-    # if df.columns[0] == 'Rainfall':
-    #     print(predictions, "Ini Hasil Prediksi")
-    #     predictions_df = pd.DataFrame(predictions, columns=['Rainfall'])
-    #     predictions_denormalized = denormalization_boxcox(predictions_df, lambda_values_train)
-    #     predictions_denormalized = predictions_denormalized.iloc[:,0].values
-
-    #     test_df = pd.DataFrame(test, columns=[df.columns[0]])
-    #     test_denormalized = denormalization_boxcox(test_df, lambda_values_test)
-    #     test_denormalized = test_denormalized.iloc[:, 0].values
-
-    #     print(predictions_denormalized, "Itu apa prediksi sesudah")
-    #     print(test_denormalized, "Itu apa test sesudah")
-    # else:
-    #     predictions_denormalized = predictions
-    #     test_denormalized = test
-
-    
-
-    # # implement denormalization z-score
-    # if df.columns[0] == 'Rainfall':
-    #     z_predictions = denormalization_zscore(predictions, train)
-    #     z_test = denormalization_zscore(test, train)
-    #     print(z_test, "Ini test sebelum")
-    #     print(z_predictions, "Ini prediksi sebelum")
-    # else:
-    #     z_predictions = predictions
-    #     z_test = test
 
     ## Implement Z-score
     z_predictions = z_score(predictions)
@@ -419,53 +334,7 @@ def fwiCalculation(Temp, rh, wind, rainfall):
             current_wind = 10
         windkmh = current_wind * 3.6
 
-        # if current_rh > 95:
-        #     current_rh = 95
-        
-        # elif current_rh <= 65:
-        #     current_rh = 65
-        
-        # elif current_rainfall > 200 :
-        #     current_rainfall = 200
-
-
-
-        # ## FFMC SECTION
-        # m_prev = 147.2 * (101.0 - FFMC_prev) / (59.5 + FFMC_prev)
-        # # Calculate mo
-        # if current_rainfall > 0.5:
-        #     rf = current_rainfall - 0.5
-        #     if m_prev > 150.0:
-        #         mo = m_prev + (42.5 * rf * math.exp(-100.0 / (251.0 - m_prev)) * (1.0 - math.exp(-6.93 / rf))) + (0.0015 * (m_prev - 150.0) ** 2) * math.sqrt(rf)
-        #         if mo > 250.0:
-        #             mo = 250.0
-        #     else:
-        #         mo = m_prev + 42.5 * rf * math.exp(-100.0 / (251.0 - m_prev)) * (1.0 - math.exp(-6.93 / rf))
-        # else:
-        #     mo = m_prev
-
-        # # Calculate Ed
-        # Ed = 0.942 * (current_rh ** 0.679) + (11.0 * math.exp((current_rh - 100.0) / 10.0)) + 0.18 * (21.1 - current_temp) * (1.0 - 1.0 / math.exp(0.115 * current_rh))
-
-        # # Calculate m
-        # if Ed > mo:
-        #     Ew = 0.618 * (current_rh ** 0.753) + (10.0 * math.exp((current_rh - 100.0) / 10.0)) + 0.18 * (21.1 - current_temp) * (1.0 - 1.0 / math.exp(0.115 * current_rh))
-        #     if mo < Ew:
-        #         k1 = 0.424 * (1.0 - (1.0 - current_rh / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (1.0 - current_rh / 100.0) ** 8)
-        #         kw = k1 * (0.581 * math.exp(0.0365 * current_temp))
-        #         m = Ew - (Ew - mo) * math.exp(-kw)          
-        #     else:
-        #         m = mo
-
-        # else:
-        #     k0 = 0.424 * (1.0 - ((current_rh / 100.0) ** 1.7)) + (0.0694 * math.sqrt(windkmh)) * (1.0 - ((current_rh / 100.0)) ** 8)
-        #     kd = k0 * (0.581 * math.exp(0.0365 * current_temp))
-        #     m = Ed + (mo - Ed) * 10**(-kd)
-
-        # # Calculate FFMC
-        # FFMC = (59.5 * (250.0 - m)) / (147.2 + m)
-
-        ## FFMC Section
+        ## FFMC SECTION
         m_prev = 147.2 * (101.0 - FFMC_prev) / (59.5 + FFMC_prev)
         # Calculate mo
         if current_rainfall > 0.5:
@@ -488,7 +357,7 @@ def fwiCalculation(Temp, rh, wind, rainfall):
             if mo < Ew:
                 k1 = 0.424 * (1.0 - (1.0 - current_rh / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (1.0 - current_rh / 100.0) ** 8)
                 kw = k1 * (0.581 * math.exp(0.0365 * current_temp))
-                m = Ew - (Ew - mo) * math.exp(-kw)          
+                m = Ew - (Ew - mo) * math.exp(-kw)
             else:
                 m = mo
 
@@ -575,8 +444,6 @@ def fwiCalculation(Temp, rh, wind, rainfall):
         Ff = 91.9 * math.exp(-0.1386 * mFuel) * (1.0 + (mFuel ** 5.31) / (4.93 * (10 ** 7)))
         isi = Ff * Fu* 0.208
 
-
-
         ## FWI  SECTION
         if bui <= 80.0:
             fD = 0.626 * (bui ** 0.809) + 2.0
@@ -636,22 +503,6 @@ def dataProcessing(data, start, end,freq='D'):
         data = data.replace(['8888', ''], np.nan)
         data = data.astype(float)
         data = data.fillna(method='ffill').fillna(method='bfill')
-        # if(data.columns[0] == 'Rainfall'):
-        #     array = data.values.flatten()
-        #     # min max
-        #     # min_val = min(array)
-        #     # max_val = max(array)
-        #     # normalized = (array - min_val) / (max_val - min_val)
-        #     # denormalized_rainfall = normalized * (max_val - min_val) + min_val
-        #     # data = pd.DataFrame(normalized.reshape(data.shape), columns=data.columns, index=data.index)
-        #     # log normalization
-        #     # normalized = np.log(array)
-        #     # normalisasi dengan co-boxcox
-        #     normalized, lmbda = stats.boxcox(array)
-        #     lambda_val = lmbda
-        #     print(lambda_val,"lamda")
-        #     data = pd.DataFrame(normalized.reshape(data.shape), columns=data.columns, index=data.index)
-         
         return data
     
     index = pd.date_range(start, end, freq=freq)
@@ -704,7 +555,6 @@ def dataProcessing(data, start, end,freq='D'):
 
             #'additive'zz
             #'multiplicative'
-        # print("HEHEHEHEHEHEHEE")
         parameters.append({
             'name': param_name,
             'data': param_data,
@@ -714,46 +564,19 @@ def dataProcessing(data, start, end,freq='D'):
             'alpha' : alpha,
             'beta' : beta,
             'gamma' : gamma
-            
-            
-            # 'trend': None if param_name in ['Temperature','Humidity'] else 'multiplicative' if param_name == 'Wind' else 'additive' if param_name == 'Rainfall' else None,
-            # 'seasonal': None,
         })
 
-        # #print parameter name
-        # print("Data parameter")
-        # print(param_name)
-        # print(param_data)
 
         globals()[f'{param_name.lower()}_list'] = param_list
 
-    # date_list = df_filtered['Date'].tolist()
-
-    # Grid Search
-    # #show Rainfall data
-    # print("--------- Rainfall Data ---------")
-    # print(parameters[3]['data'])
-
-    # # Grid Search for rainfall
-    # Rainfall_grid = grid_search(parameters[3]['data'])
-
-    # # Show grid Result
-    # print("--------- Grid Search Result ---------")
-    # print("Rainfall SECTION")
-    # print(Rainfall_grid)
 
     predict_result = []
     error_result = []
     # date list from start to end
     date_list = pd.date_range(start, end, freq=freq).tolist()
-
-
     # Looping for prediction
     for param in parameters:
-        
         result = Prediction(param['data'], param['seasonal'], param['trend'],param['periode'],param['alpha'] ,param['beta'], param['gamma'],start, end)
-            
-        # result = Prediction(param['data'], param['seasonal'], param['trend'], 4, 0.9, 0.1, 0.1, start, end)
         predict_result.append({param['name']: result['predictions']})
         error_result.append({
             param['name']: {
@@ -764,18 +587,6 @@ def dataProcessing(data, start, end,freq='D'):
                 'R2': result['r2']
             }
     })
-    # print(predict_result, 'predict_result')
-    # ambil objek Rainfall dari predict_result
-    # denormalize Rainfall
-    # print parametes[3]['data']
-    
-    # if(predict_result[3]['Rainfall'] != None):
-    #     array = np.array(parameters[3]['data']['Rainfall'])
-    #     # denormalized_rainfall = np.exp(array)
-    #     print(lambda_val)
-    #     denormalized_rainfall = stats.boxcox(array, lambda_val)
-    #     # masukan ke predict_result
-    #     predict_result[3]['Rainfall'] = denormalized_rainfall.tolist()
 
     ## Fuzzy Universe
     def fuzzy(value):
