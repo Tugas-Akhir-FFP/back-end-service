@@ -175,7 +175,7 @@ def Test_kalkulasi():
     print(test, "test")
 
     mae = np.mean(np.abs(pred - test))
-    mape = np.mean(np.abs(pred - test)/np.abs(test)*100)
+    mape = np.mean((np.abs(pred - test)/np.abs(test))*100)
     mse = np.square(np.subtract(test,pred)).mean()
     r2 = r2_score(test, pred)
     rmse = math.sqrt(mse)
@@ -249,7 +249,7 @@ def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
     # forecast = z_score_DeStandardization(forecast, data)
 
     forecast = np.array(forecast).flatten().__abs__().round(1)
-    print(forecast, "ini hasil forecastnya bwang : ")
+    # print(forecast, "ini hasil forecastnya bwang : ")
     return forecast.tolist()
 
 def fwiCalculation(Temp, rh, wind, rainfall):
@@ -538,23 +538,23 @@ def dataProcessing(data, start, end,freq='D'):
     ## Fuzzy Universe
     def fuzzy(value):
         result=[]
-        fwi = ctrl.Antecedent(np.arange(0, 30, 1), 'x') 
-        fwi['biru'] = fuzz.trapmf(fwi.universe, [0, 0, 1, 2])
-        fwi['hijau'] = fuzz.trapmf(fwi.universe, [1, 2, 6, 7])
-        fwi['kuning'] = fuzz.trimf(fwi.universe, [6, 7, 13])
-        fwi['merah'] = fuzz.trapmf(fwi.universe, [7, 13, np.inf, np.inf])
 
-        fwi_level_biru = fuzz.interp_membership(fwi.universe, fwi['biru'].mf, value)
-        fwi_level_hijau = fuzz.interp_membership(fwi.universe, fwi['hijau'].mf, value)
-        fwi_level_kuning = fuzz.interp_membership(fwi.universe, fwi['kuning'].mf, value)
-        fwi_level_merah = fuzz.interp_membership(fwi.universe, fwi['merah'].mf, value)
-        result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah]
-        
-        plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
-        plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
-        plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
-        plt.plot(fwi.universe, fwi['merah'].mf, 'r', linewidth=1.5, label='Merah')
-        # plt.show()
+
+
+        if value <= 1 :
+            result = [1, 0, 0, 0]
+        elif value > 1 and value <= 6 :
+            result = [0, 1, 0, 0]
+        elif value > 6 and value <= 13 :
+            result = [0, 0, 1, 0]
+        else :
+            result = [0, 0, 0, 1]
+
+        # plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
+        # plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
+        # plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
+        # plt.plot(fwi.universe, fwi['merah'].mf, 'r', linewidth=1.5, label='Merah')
+        # # plt.show()
         return result
     
     # Get Prediction result from each parameter list 
@@ -653,7 +653,7 @@ def ForecastProcessing(data, fore,freq='D'):
         #print 7 data last from param_data
         
         # print("Data parameter")
-        print(param_data.tail(7))
+        # print(param_data.tail(7))
         # Test_kalkulasi()
         param_list = param_data[param_name].tolist()
 
@@ -687,7 +687,6 @@ def ForecastProcessing(data, fore,freq='D'):
             alpha = 0.9
             beta = 0.1
             gamma = 0.3  
-            # Test_kalkulasi()
 
             #'additive'zz
             #'multiplicative'
@@ -719,7 +718,7 @@ def ForecastProcessing(data, fore,freq='D'):
     for param in parameters:
         forecast = Forecast(param['data'], param['seasonal'], param['trend'],param['periode'],param['alpha'] ,param['beta'], param['gamma'], last_date,fore)
         # forecast = Forecast(param['data'], 'additive', 'additive', 4, 0.3, 0.3, 0.3, last_date, fore)
-        Test_kalkulasi()
+        # Test_kalkulasi()
         forecast_result.append({param['name']: forecast})
 
     ## Fuzzy Universe
