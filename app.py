@@ -158,28 +158,28 @@ def z_score_DeStandardization(data, original_data):
     return z_scores
 
 def Test_kalkulasi():
-    x = [26.0, 26.4, 26.7, 27.1, 27.5, 27.9, 28.2]
+    x = [0.9, 0.6, 0.7, 2.5, 0.9, 0.6, 0.7]
     test = [1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0]
 
     x = np.array(x).flatten()
     test = np.array(test).flatten()
 
-    # z_predictions = x
-    # z_test = test
+    z_predictions = x
+    z_test = test
     
 
-    z_predictions = z_score(x)
-    z_test = z_score(test)
-    print(z_predictions)
-    print(z_test)
-
-    y = z_score_DeStandardization(z_predictions, x)
-    print(y, "ini hasilnya denormalisasi")
-    a = z_score_DeStandardization(z_test, test)
-    print(a, "ini hasilnya denormalisasi")
-    # print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
+    # z_predictions = z_score(x)
+    # z_test = z_score(test)
     # print(z_predictions)
     # print(z_test)
+
+    # y = z_score_DeStandardization(z_predictions, x)
+    # print(y, "ini hasilnya denormalisasi")
+    # a = z_score_DeStandardization(z_test, test)
+    # print(a, "ini hasilnya denormalisasi")
+    # # print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
+    # # print(z_predictions)
+    # # print(z_test)
 
     mae = np.mean(np.abs(z_predictions - z_test))
 
@@ -255,8 +255,9 @@ def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
     train = df[0:high]
 
     # implement z-score for train data
-    data = train.values
-    x = z_score(data)
+    # data = train.values
+    # x = z_score(data)
+    x = train
     model = ExponentialSmoothing(x,
                                 seasonal=seasonal,
                                 trend=trend,
@@ -266,10 +267,11 @@ def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
                         smoothing_seasonal=sseasonal)
     # Forecast data z-score
     forecast = model_fit.forecast(steps=fore)
-    #  z-score destandardization for forecast data
-    forecast = z_score_DeStandardization(forecast, data)
+    #  z-score destandardization for forecast data  
+    # forecast = z_score_DeStandardization(forecast, data)
 
     forecast = np.array(forecast).flatten().__abs__().round(1)
+    print(forecast, "ini hasil forecastnya bwang : ")
     return forecast.tolist()
 
 def fwiCalculation(Temp, rh, wind, rainfall): 
@@ -484,7 +486,7 @@ def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list
 
     return data_list
 
-def dataProcessing(data, periods, start, end,freq='D'):
+def dataProcessing(data, start, end,freq='D'):
     def pre_Fix_data(data) :
         data = data.replace('', np.nan)
         data = data.replace(['0'], np.nan)
@@ -496,7 +498,6 @@ def dataProcessing(data, periods, start, end,freq='D'):
     index = pd.date_range(start, end, freq=freq)
     df = pd.DataFrame(data)
     df.columns = df.iloc[0]
-    df = df[:-periods]
     df = df.rename(columns={'Tanggal':'Date','Tx':'Temperature','RH_avg':'Humidity','ff_x':'Wind','RR':'Rainfall'})
     
     #filter data by range date start and end
@@ -678,18 +679,18 @@ def dataProcessing(data, periods, start, end,freq='D'):
 
 ## Data processing for forecast
 
-def ForecastProcessing(data, periods, fore,freq='D'):
+def ForecastProcessing(data, fore,freq='D'):
     def pre_Fix_data(data) :
         data = data.replace('', np.nan)
         data = data.replace(['0'], np.nan)
         data = data.replace(['8888', ''], np.nan)
         data = data.astype(float)
-        data = data.fillna(method='ffill').fillna(method='bfill')
+        data = data.fillna(data.mean())
         return data
     
     df = pd.DataFrame(data)
     df.columns = df.iloc[0]
-    df = df[:-periods]
+    # df = df[:-periods]
     df = df.rename(columns={'Tanggal':'Date','Tx':'Temperature','RH_avg':'Humidity','ff_x':'Wind','RR':'Rainfall'})
     
     #filter data by range date start and end
@@ -703,12 +704,12 @@ def ForecastProcessing(data, periods, fore,freq='D'):
 
     for param_name in parameters_names : 
         param_data = df[['Date', param_name]].set_index('Date')
-        param_data = pre_Fix_data(param_data).resample('D').mean()
+        param_data = pre_Fix_data(param_data)
     
         #print 7 data last from param_data
         
         # print("Data parameter")
-        # print(param_data.tail(7))
+        print(param_data.tail(7))
         # Test_kalkulasi()
         param_list = param_data[param_name].tolist()
 
@@ -737,11 +738,12 @@ def ForecastProcessing(data, periods, fore,freq='D'):
             gamma = 0.3
         else :
             x = 'additive'
-            y = 'additive'
+            y = None
             period = 4
-            alpha = 0.3
-            beta = 0.3
-            gamma = 0.3
+            alpha = 0.9
+            beta = 0.1
+            gamma = 0.1
+            # Test_kalkulasi()
 
             #'additive'zz
             #'multiplicative'
@@ -779,23 +781,23 @@ def ForecastProcessing(data, periods, fore,freq='D'):
     ## Fuzzy Universe
     def fuzzy(value):
         result=[]
-        fwi = ctrl.Antecedent(np.arange(0, 30, 1), 'x') 
-        fwi['biru'] = fuzz.trapmf(fwi.universe, [0, 0, 1, 2])
-        fwi['hijau'] = fuzz.trapmf(fwi.universe, [1, 2, 6, 7])
-        fwi['kuning'] = fuzz.trimf(fwi.universe, [6, 7, 13])
-        fwi['merah'] = fuzz.trapmf(fwi.universe, [7, 13, np.inf, np.inf])
 
-        fwi_level_biru = fuzz.interp_membership(fwi.universe, fwi['biru'].mf, value)
-        fwi_level_hijau = fuzz.interp_membership(fwi.universe, fwi['hijau'].mf, value)
-        fwi_level_kuning = fuzz.interp_membership(fwi.universe, fwi['kuning'].mf, value)
-        fwi_level_merah = fuzz.interp_membership(fwi.universe, fwi['merah'].mf, value)
-        result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah]
-        
-        plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
-        plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
-        plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
-        plt.plot(fwi.universe, fwi['merah'].mf, 'r', linewidth=1.5, label='Merah')
-        # plt.show()
+
+
+        if value <= 1 :
+            result = [1, 0, 0, 0]
+        elif value > 1 and value <= 6 :
+            result = [0, 1, 0, 0]
+        elif value > 6 and value <= 13 :
+            result = [0, 0, 1, 0]
+        else :
+            result = [0, 0, 0, 1]
+
+        # plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
+        # plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
+        # plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
+        # plt.plot(fwi.universe, fwi['merah'].mf, 'r', linewidth=1.5, label='Merah')
+        # # plt.show()
         return result
     
 
@@ -871,7 +873,6 @@ def ForecastProcessing(data, periods, fore,freq='D'):
 def get_credentials():
     sheetName = request.args.get('sheetName')
     worksheetName = request.args.get('worksheetName')
-    periods = request.args.get('periods')
     start = request.args.get('start')
     end = request.args.get('end')
     
@@ -882,14 +883,14 @@ def get_credentials():
     worksheet = sheet.worksheet(worksheetName)
     data = worksheet.get_all_values()
 
-    return dataProcessing(data, int(periods), start, end)# type: ignore
+    return dataProcessing(data, start, end)# type: ignore
 
 ## API for Forecast
 @app.route('/api/forecast')
 def get_forecast():
     sheetName = request.args.get('sheetName')
     worksheetName = request.args.get('worksheetName')
-    periods = request.args.get('periods')
+    # periods = request.args.get('periods')
     fore = request.args.get('fore')
 
     scope_app =['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
@@ -899,7 +900,7 @@ def get_forecast():
     worksheet = sheet.worksheet(worksheetName)
     data = worksheet.get_all_values()
 
-    return ForecastProcessing(data, int(periods),int(fore))# type: ignore
+    return ForecastProcessing(data,int(fore))# type: ignore
 
 if __name__ == '__main__':
     app.run(debug=True, port=3000)
