@@ -160,49 +160,39 @@ def z_score_DeStandardization(data, original_data):
     return z_scores
 
 def Test_kalkulasi():
-    x = [0.9, 0.6, 0.7, 2.5, 0.9, 0.6, 0.7]
-    test = [1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0]
+    x = [15.8, 9.2, 4.9, 1.3, 13.9, 7.3, 3.0]
+    test = [15.7, 15.7, 15.7, 15.7, 15.7, 15.7, 0.1]
+
+    pred = z_score(x)
+    test = z_score(test)
+    # pred = x
+    # test = test
+    # pred = np.array(pred).flatten().__abs__().round(1)
+    # test = np.array(test).flatten()
+
+    print("Hasil Z-score")
+    print(pred, "prediksi")
+    print(test, "test")
+
+    mae = np.mean(np.abs(pred - test))
+    mape = np.mean(np.abs(pred - test)/np.abs(test)*100)
+    mse = np.square(np.subtract(test,pred)).mean()
+    r2 = r2_score(test, pred)
+    rmse = math.sqrt(mse)
+
+    print("Ini hasilnya")
+    print(mae, "mae")
+    print(mape, "mape")
+    print(mse, "mse")
+    print(r2, "r2")
+    print(rmse, "rmse")
+
 
 def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, end):
     low = df.index.get_loc(start)
     high = df.index.get_loc(end)
 
     train, test = df[1:high], df[low:high]
-
-    # #Test Area
-    # train, test = df.iloc[1:high], df.iloc[low:high]
-    # train = train[1:]
-    # test = test[1:]
-
-    # print(train, "Ini train sebelum")
-    # print(test, "Ini test sebelum")
-
-    # ## Implement normalization
-    # lambda_val = 0.05282858048454572
-    # if df.columns[0] == 'Rainfall':
-    #     train, lambda_values_train = normalization_boxcox(train)
-    #     print(train, "Ini train sebelum")
-
-    #     print(test, "Ini test sebelum")
-    #     test, lambda_values_test = normalization_boxcox(test)
-    #     print(test, "Ini test sesudah")
-    #     # print(train, "Ini train sebelum")
-    # else:
-    #     train = train
-    #     test = test
-    # if df.columns[0] == 'Rainfall':
-
-    #     print(test, "Ini test sebelum")
-    #     # train = normalization_boxcox(train)
-    #     # test = normalization_boxcox(test)
-
-    #     print(test, "Ini train Sesudah")
-    # else:
-    #     train = train
-    #     test = test
-
-    # if df.columns[0] == 'Rainfall':
-    #     print(test, "Ini test sebelum")
 
     model = ExponentialSmoothing(train,
                                 seasonal=seasonal,
@@ -223,49 +213,10 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
     z_predictions = z_score(predictions)
     z_test = z_score(test)
 
-    # # Implement Denormalization Boxcox
-    # if df.columns[0] == 'Rainfall':
-    #     array = np.array(data['Rainfall'])
-    #     denormalized_predictions = stats.boxcox(predictions, lambda_val)
-    #     denormalized_test = stats.boxcox(test, lambda_val)
-    # else:
-    #     denormalized_predictions = predictions
-    #     denormalized_test = test
-    # if df.columns[0] == 'Rainfall':
-    #     print(predictions, "Ini Hasil Prediksi")
-    # ## Apply min-max denormalization
-    # if df.columns[0] == 'Rainfall':
-    #     print(predictions, "Ini prediksi sebelum")
-    #     predictions_result = denormalization_minmax(predictions, df['Rainfall'])
-    #     print(predictions_result, "Ini prediksi sesudah")
-    #     predictions = predictions_result
-    # else:
-    #     predictions_result = predictions
-
-    ## Implement normalization minMax
-    # if df.columns[0] == 'Temperature':
-    #     #normalization predict result
-    #     predictions_result = normalization_minmax(predictions)
-    #     test = normalization_minmax(test)
-    # else :
-    #     predictions_result = predictions
-
-    # mse = np.square(np.subtract(test,predictions_result)).mean()
-    # r2 = r2_score(test, predictions_result)
-
     mae = np.mean(np.abs(z_predictions - z_test))
-
-    #create mape x100% to get percentage value
     mape = np.mean((np.abs(z_predictions - z_test)/np.abs(test))* 100)
-
-    # mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
     mse = np.square(np.subtract(z_test,z_predictions)).mean()
     r2 = r2_score(z_test, z_predictions)
-
-    # mae = np.mean(np.abs(denormalized_predictions - denormalized_test))
-    # mape = np.mean(np.abs(denormalized_predictions - denormalized_test)/np.abs(denormalized_test))
-    # mse = np.square(np.subtract(denormalized_test,denormalized_predictions)).mean()
-    # r2 = r2_score(denormalized_test, denormalized_predictions)
     rmse = math.sqrt(mse)
 
     return {
@@ -276,7 +227,6 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
         'r2' : r2,
         'rmse' : rmse
     }
-#create function for formula fwi calculation using 4 parameter
 
 def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
     high = df.index.get_loc(end)
@@ -710,18 +660,18 @@ def ForecastProcessing(data, fore,freq='D'):
         # #conditional argument Property for parameter
         if param_name == 'Temperature' :
             x = 'additive'
-            y = 'additive'
+            y = None
             period = 4
             alpha = 0.9
-            beta = 0.1
+            beta = 0.2
             gamma = 0.1  
         elif param_name == 'Humidity' :
-            x = 'additive'
+            x = None
             y = 'additive'
             period = 4
             alpha = 0.9
             beta = 0.1
-            gamma = 0.1    
+            gamma = 0.1   
 
         elif param_name == 'Wind' :
             x = 'additive'
@@ -731,12 +681,12 @@ def ForecastProcessing(data, fore,freq='D'):
             beta = 0.1
             gamma = 0.1  
         else :
-            x = 'additive'
+            x = 'multiplicative'
             y = 'additive'
             period = 4
             alpha = 0.9
             beta = 0.1
-            gamma = 0.1  
+            gamma = 0.3  
             # Test_kalkulasi()
 
             #'additive'zz
@@ -769,7 +719,7 @@ def ForecastProcessing(data, fore,freq='D'):
     for param in parameters:
         forecast = Forecast(param['data'], param['seasonal'], param['trend'],param['periode'],param['alpha'] ,param['beta'], param['gamma'], last_date,fore)
         # forecast = Forecast(param['data'], 'additive', 'additive', 4, 0.3, 0.3, 0.3, last_date, fore)
-        # Test_kalkulasi()
+        Test_kalkulasi()
         forecast_result.append({param['name']: forecast})
 
     ## Fuzzy Universe
