@@ -355,9 +355,9 @@ def fwiCalculation(Temp, rh, wind, rainfall):
         if Ed > mo:
             Ew = 0.618 * (current_rh ** 0.753) + (10.0 * math.exp((current_rh - 100.0) / 10.0)) + 0.18 * (21.1 - current_temp) * (1.0 - 1.0 / math.exp(0.115 * current_rh))
             if mo < Ew:
-                k1 = 0.424 * (1.0 - (1.0 - current_rh / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (1.0 - current_rh / 100.0) ** 8)
+                k1 = 0.424 * (1.0 - (100.0 - current_rh / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (100.0 - current_rh / 100.0) ** 8)
                 kw = k1 * (0.581 * math.exp(0.0365 * current_temp))
-                m = Ew - (Ew - mo) * math.exp(-kw)
+                m = Ew - (Ew - mo) * 10 **(-kw)
             else:
                 m = mo
 
