@@ -305,18 +305,53 @@ def fwiCalculation(Temp, rh, wind, rainfall):
             current_wind = 10
         windkmh = current_wind * 3.6
 
-        if current_rh > 95:
-            current_rh = 95
+        # if current_rh > 95:
+        #     current_rh = 95
         
-        elif current_rh <= 65:
-            current_rh = 65
+        # elif current_rh <= 65:
+        #     current_rh = 65
         
-        elif current_rainfall > 200 :
-            current_rainfall = 200
+        # elif current_rainfall > 200 :
+        #     current_rainfall = 200
 
 
 
-        ## FFMC SECTION
+        # ## FFMC SECTION
+        # m_prev = 147.2 * (101.0 - FFMC_prev) / (59.5 + FFMC_prev)
+        # # Calculate mo
+        # if current_rainfall > 0.5:
+        #     rf = current_rainfall - 0.5
+        #     if m_prev > 150.0:
+        #         mo = m_prev + (42.5 * rf * math.exp(-100.0 / (251.0 - m_prev)) * (1.0 - math.exp(-6.93 / rf))) + (0.0015 * (m_prev - 150.0) ** 2) * math.sqrt(rf)
+        #         if mo > 250.0:
+        #             mo = 250.0
+        #     else:
+        #         mo = m_prev + 42.5 * rf * math.exp(-100.0 / (251.0 - m_prev)) * (1.0 - math.exp(-6.93 / rf))
+        # else:
+        #     mo = m_prev
+
+        # # Calculate Ed
+        # Ed = 0.942 * (current_rh ** 0.679) + (11.0 * math.exp((current_rh - 100.0) / 10.0)) + 0.18 * (21.1 - current_temp) * (1.0 - 1.0 / math.exp(0.115 * current_rh))
+
+        # # Calculate m
+        # if Ed > mo:
+        #     Ew = 0.618 * (current_rh ** 0.753) + (10.0 * math.exp((current_rh - 100.0) / 10.0)) + 0.18 * (21.1 - current_temp) * (1.0 - 1.0 / math.exp(0.115 * current_rh))
+        #     if mo < Ew:
+        #         k1 = 0.424 * (1.0 - (1.0 - current_rh / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (1.0 - current_rh / 100.0) ** 8)
+        #         kw = k1 * (0.581 * math.exp(0.0365 * current_temp))
+        #         m = Ew - (Ew - mo) * math.exp(-kw)          
+        #     else:
+        #         m = mo
+
+        # else:
+        #     k0 = 0.424 * (1.0 - ((current_rh / 100.0) ** 1.7)) + (0.0694 * math.sqrt(windkmh)) * (1.0 - ((current_rh / 100.0)) ** 8)
+        #     kd = k0 * (0.581 * math.exp(0.0365 * current_temp))
+        #     m = Ed + (mo - Ed) * 10**(-kd)
+
+        # # Calculate FFMC
+        # FFMC = (59.5 * (250.0 - m)) / (147.2 + m)
+
+        ## FFMC Section
         m_prev = 147.2 * (101.0 - FFMC_prev) / (59.5 + FFMC_prev)
         # Calculate mo
         if current_rainfall > 0.5:
@@ -327,12 +362,8 @@ def fwiCalculation(Temp, rh, wind, rainfall):
                     mo = 250.0
             else:
                 mo = m_prev + 42.5 * rf * math.exp(-100.0 / (251.0 - m_prev)) * (1.0 - math.exp(-6.93 / rf))
-                if mo > 250.0:
-                    mo = 250.0
         else:
             mo = m_prev
-            if mo > 250.0:
-                mo = 250.0
 
         # Calculate Ed
         Ed = 0.942 * (current_rh ** 0.679) + (11.0 * math.exp((current_rh - 100.0) / 10.0)) + 0.18 * (21.1 - current_temp) * (1.0 - 1.0 / math.exp(0.115 * current_rh))
@@ -340,22 +371,20 @@ def fwiCalculation(Temp, rh, wind, rainfall):
         # Calculate m
         if Ed > mo:
             Ew = 0.618 * (current_rh ** 0.753) + (10.0 * math.exp((current_rh - 100.0) / 10.0)) + 0.18 * (21.1 - current_temp) * (1.0 - 1.0 / math.exp(0.115 * current_rh))
-            if Ew > mo:
-                k1 = 0.424 * (1.0 - ((100.0 - current_rh) / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - ((100.0 - current_rh )/ 100.0) ** 8)
+            if mo < Ew:
+                k1 = 0.424 * (1.0 - (1.0 - current_rh / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (1.0 - current_rh / 100.0) ** 8)
                 kw = k1 * (0.581 * math.exp(0.0365 * current_temp))
-                m = Ew - (Ew - mo) * 10 ** (-kw)      
+                m = Ew - (Ew - mo) * math.exp(-kw)          
             else:
                 m = mo
 
         else:
-
-            k0 = 0.424 * (1.0 - ((current_rh/100) ** 1.7)) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (current_rh/100) ** 8)
+            k0 = 0.424 * (1.0 - ((current_rh / 100.0) ** 1.7)) + (0.0694 * math.sqrt(windkmh)) * (1.0 - ((current_rh / 100.0)) ** 8)
             kd = k0 * (0.581 * math.exp(0.0365 * current_temp))
             m = Ed + (mo - Ed) * 10**(-kd)
 
         # Calculate FFMC
         FFMC = (59.5 * (250.0 - m)) / (147.2 + m)
-
         ## DMC SECTION
             
         #Set default Day Lenght = 12 for indonesia
@@ -545,7 +574,7 @@ def dataProcessing(data, start, end,freq='D'):
 
             #'additive'zz
             #'multiplicative'
-        print("HEHEHEHEHEHEHEE")
+        # print("HEHEHEHEHEHEHEE")
         parameters.append({
             'name': param_name,
             'data': param_data,
@@ -718,31 +747,31 @@ def ForecastProcessing(data, fore,freq='D'):
             x = 'additive'
             y = 'additive'
             period = 4
-            alpha = 0.3
-            beta = 0.3
-            gamma = 0.3  
+            alpha = 0.9
+            beta = 0.1
+            gamma = 0.1  
         elif param_name == 'Humidity' :
             x = 'additive'
-            y = None
+            y = 'additive'
             period = 4
             alpha = 0.9
             beta = 0.1
-            gamma = 0.1      
+            gamma = 0.1    
 
         elif param_name == 'Wind' :
             x = 'additive'
             y = 'additive'
             period = 4
-            alpha = 0.3
-            beta = 0.3
-            gamma = 0.3
+            alpha = 0.9
+            beta = 0.1
+            gamma = 0.1  
         else :
             x = 'additive'
-            y = None
+            y = 'additive'
             period = 4
             alpha = 0.9
             beta = 0.1
-            gamma = 0.1
+            gamma = 0.1  
             # Test_kalkulasi()
 
             #'additive'zz
