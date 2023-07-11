@@ -502,7 +502,7 @@ def dataProcessing(data, start, end,freq='D'):
         data = data.replace(['0'], np.nan)
         data = data.replace(['8888', ''], np.nan)
         data = data.astype(float)
-        data = data.fillna(method='ffill').fillna(method='bfill')
+        data = data.fillna(method='ffill').fillna(method='bfill')         
         return data
     
     index = pd.date_range(start, end, freq=freq)
@@ -532,29 +532,26 @@ def dataProcessing(data, start, end,freq='D'):
             beta = 0.1
             gamma = 0.1
         elif param_name == 'Humidity' :
-            x = 'multiplicative'
+            x = None
             y = None
             period = 4
             alpha = 0.9
             beta = 0.4
             gamma = 0.1
         elif param_name == 'Wind' :
-            x = 'additive'
-            y = None
-            period = 4
-            alpha = 0.9
-            beta = 0.6
-            gamma = 0.1
-        else :
-            x = None
+            x = 'multiplicative'
             y = None
             period = 4
             alpha = 0.9
             beta = 0.1
             gamma = 0.1
-
-            #'additive'zz
-            #'multiplicative'
+        else :
+            x = 'additive'
+            y = None
+            period = 4
+            alpha = 0.9
+            beta = 0.1
+            gamma = 0.1
         parameters.append({
             'name': param_name,
             'data': param_data,
@@ -564,11 +561,11 @@ def dataProcessing(data, start, end,freq='D'):
             'alpha' : alpha,
             'beta' : beta,
             'gamma' : gamma
+            # 'trend': None if param_name in ['Temperature','Humidity'] else 'multiplicative' if param_name == 'Wind' else 'additive' if param_name == 'Rainfall' else None,
+            # 'seasonal': None,
         })
 
-
         globals()[f'{param_name.lower()}_list'] = param_list
-
 
     predict_result = []
     error_result = []
@@ -887,7 +884,6 @@ def get_credentials():
 def get_forecast():
     sheetName = request.args.get('sheetName')
     worksheetName = request.args.get('worksheetName')
-    # periods = request.args.get('periods')
     fore = request.args.get('fore')
 
     scope_app =['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
