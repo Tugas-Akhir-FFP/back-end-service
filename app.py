@@ -16,6 +16,8 @@ from sklearn.metrics import r2_score
 import skfuzzy as fuzz 
 from skfuzzy import control as ctrl
 from statsmodels.tsa.holtwinters import ExponentialSmoothing 
+from scipy import stats
+from scipy.stats import boxcox
 from sklearn.preprocessing import MinMaxScaler
 
 app = Flask(__name__)
@@ -158,45 +160,33 @@ def z_score_DeStandardization(data, original_data):
     return z_scores
 
 def Test_kalkulasi():
-    x = [0.9, 0.6, 0.7, 2.5, 0.9, 0.6, 0.7]
-    test = [1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0]
+    x = [15.8, 9.2, 4.9, 1.3, 13.9, 7.3, 3.0]
+    test = [15.7, 15.7, 15.7, 15.7, 15.7, 15.7, 0.1]
 
-    x = np.array(x).flatten()
-    test = np.array(test).flatten()
+    pred = z_score(x)
+    test = z_score(test)
+    # pred = x
+    # test = test
+    # pred = np.array(pred).flatten().__abs__().round(1)
+    # test = np.array(test).flatten()
 
-    z_predictions = x
-    z_test = test
-    
+    print("Hasil Z-score")
+    print(pred, "prediksi")
+    print(test, "test")
 
-    # z_predictions = z_score(x)
-    # z_test = z_score(test)
-    # print(z_predictions)
-    # print(z_test)
-
-    # y = z_score_DeStandardization(z_predictions, x)
-    # print(y, "ini hasilnya denormalisasi")
-    # a = z_score_DeStandardization(z_test, test)
-    # print(a, "ini hasilnya denormalisasi")
-    # # print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
-    # # print(z_predictions)
-    # # print(z_test)
-
-    mae = np.mean(np.abs(z_predictions - z_test))
-
-    #create mape x100% to get percentage value
-    mape = np.mean((np.abs(z_predictions - z_test)/np.abs(test))* 100)
-
-    # mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
-    mse = np.square(np.subtract(z_test,z_predictions)).mean()
-    r2 = r2_score(z_test, z_predictions)
+    mae = np.mean(np.abs(pred - test))
+    mape = np.mean((np.abs(pred - test)/np.abs(test))*100)
+    mse = np.square(np.subtract(test,pred)).mean()
+    r2 = r2_score(test, pred)
     rmse = math.sqrt(mse)
 
-    print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
-    print(r2,'r2')
-    print(mse,'mse')
-    print(rmse,'rmse')
-    print(mape,'mape')
-    print(mae,'mae')
+    print("Ini hasilnya")
+    print(mae, "mae")
+    print(mape, "mape")
+    print(mse, "mse")
+    print(r2, "r2")
+    print(rmse, "rmse")
+
 
 def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, end):
     low = df.index.get_loc(start)
@@ -212,30 +202,19 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
                         smoothing_trend=stren, 
                         smoothing_seasonal=sseasonal)
     
+    print(low, high, "ini low high")
     predictions = model_fit.predict(start=low, end= high-1)
+    print(predictions, "Hasil Prediksi")
     predictions = np.array(predictions).flatten().__abs__().round(1)
     test = np.array(test).flatten()
-
-    
-    # print("-------- Prediksi HEHEHEE------------")
-    # print(predictions)
-    # print(test)
 
 
     ## Implement Z-score
     z_predictions = z_score(predictions)
     z_test = z_score(test)
 
-    # print("-------- Kalkulasi hasil Prediksi HEHEHEE------------")
-    # print(z_predictions)
-    # print(z_test)
-
     mae = np.mean(np.abs(z_predictions - z_test))
-
-    #create mape x100% to get percentage value
     mape = np.mean((np.abs(z_predictions - z_test)/np.abs(test))* 100)
-
-    # mape = np.mean(np.abs(z_predictions - z_test)/np.abs(test))
     mse = np.square(np.subtract(z_test,z_predictions)).mean()
     r2 = r2_score(z_test, z_predictions)
     rmse = math.sqrt(mse)
@@ -248,7 +227,6 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
         'r2' : r2,
         'rmse' : rmse
     }
-#create function for formula fwi calculation using 4 parameter
 
 def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
     high = df.index.get_loc(end)
@@ -271,10 +249,11 @@ def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
     # forecast = z_score_DeStandardization(forecast, data)
 
     forecast = np.array(forecast).flatten().__abs__().round(1)
-    print(forecast, "ini hasil forecastnya bwang : ")
+    # print(forecast, "ini hasil forecastnya bwang : ")
     return forecast.tolist()
 
-def fwiCalculation(Temp, rh, wind, rainfall): 
+def fwiCalculation(Temp, rh, wind, rainfall):
+    
     fwi_VALUE = []
     bui_VALUE = []
     isi_VALUE = []
@@ -305,17 +284,6 @@ def fwiCalculation(Temp, rh, wind, rainfall):
             current_wind = 10
         windkmh = current_wind * 3.6
 
-        if current_rh > 95:
-            current_rh = 95
-        
-        elif current_rh <= 65:
-            current_rh = 65
-        
-        elif current_rainfall > 200 :
-            current_rainfall = 200
-
-
-
         ## FFMC SECTION
         m_prev = 147.2 * (101.0 - FFMC_prev) / (59.5 + FFMC_prev)
         # Calculate mo
@@ -327,12 +295,8 @@ def fwiCalculation(Temp, rh, wind, rainfall):
                     mo = 250.0
             else:
                 mo = m_prev + 42.5 * rf * math.exp(-100.0 / (251.0 - m_prev)) * (1.0 - math.exp(-6.93 / rf))
-                if mo > 250.0:
-                    mo = 250.0
         else:
             mo = m_prev
-            if mo > 250.0:
-                mo = 250.0
 
         # Calculate Ed
         Ed = 0.942 * (current_rh ** 0.679) + (11.0 * math.exp((current_rh - 100.0) / 10.0)) + 0.18 * (21.1 - current_temp) * (1.0 - 1.0 / math.exp(0.115 * current_rh))
@@ -340,22 +304,20 @@ def fwiCalculation(Temp, rh, wind, rainfall):
         # Calculate m
         if Ed > mo:
             Ew = 0.618 * (current_rh ** 0.753) + (10.0 * math.exp((current_rh - 100.0) / 10.0)) + 0.18 * (21.1 - current_temp) * (1.0 - 1.0 / math.exp(0.115 * current_rh))
-            if Ew > mo:
-                k1 = 0.424 * (1.0 - ((100.0 - current_rh) / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - ((100.0 - current_rh )/ 100.0) ** 8)
+            if mo < Ew:
+                k1 = 0.424 * (1.0 - (100.0 - current_rh / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (100.0 - current_rh / 100.0) ** 8)
                 kw = k1 * (0.581 * math.exp(0.0365 * current_temp))
-                m = Ew - (Ew - mo) * 10 ** (-kw)      
+                m = Ew - (Ew - mo) * 10 **(-kw)
             else:
                 m = mo
 
         else:
-
-            k0 = 0.424 * (1.0 - ((current_rh/100) ** 1.7)) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (current_rh/100) ** 8)
+            k0 = 0.424 * (1.0 - ((current_rh / 100.0) ** 1.7)) + (0.0694 * math.sqrt(windkmh)) * (1.0 - ((current_rh / 100.0)) ** 8)
             kd = k0 * (0.581 * math.exp(0.0365 * current_temp))
             m = Ed + (mo - Ed) * 10**(-kd)
 
         # Calculate FFMC
         FFMC = (59.5 * (250.0 - m)) / (147.2 + m)
-
         ## DMC SECTION
             
         #Set default Day Lenght = 12 for indonesia
@@ -382,8 +344,6 @@ def fwiCalculation(Temp, rh, wind, rainfall):
             #MRT Section
             wmr = wmi + 1000 * rw / (48.77 + b * rw)
             pr = 244.72-43.43 * math.log(wmr - 20.0)
-            if pr < 0.0:
-                pr = 0.0
             dmc = pr + 100.0 * mth
             
         else:
@@ -492,7 +452,7 @@ def dataProcessing(data, start, end,freq='D'):
         data = data.replace(['0'], np.nan)
         data = data.replace(['8888', ''], np.nan)
         data = data.astype(float)
-        data = data.fillna(method='ffill').fillna(method='bfill')      
+        data = data.fillna(method='ffill').fillna(method='bfill')         
         return data
     
     index = pd.date_range(start, end, freq=freq)
@@ -522,30 +482,26 @@ def dataProcessing(data, start, end,freq='D'):
             beta = 0.1
             gamma = 0.1
         elif param_name == 'Humidity' :
-            x = 'multiplicative'
+            x = None
             y = None
             period = 4
             alpha = 0.9
             beta = 0.4
             gamma = 0.1
         elif param_name == 'Wind' :
-            x = 'additive'
-            y = None
-            period = 4
-            alpha = 0.9
-            beta = 0.6
-            gamma = 0.1
-        else :
-            x = None
+            x = 'multiplicative'
             y = None
             period = 4
             alpha = 0.9
             beta = 0.1
             gamma = 0.1
-
-            #'additive'zz
-            #'multiplicative'
-        print("HEHEHEHEHEHEHEE")
+        else :
+            x = 'additive'
+            y = None
+            period = 4
+            alpha = 0.9
+            beta = 0.1
+            gamma = 0.1
         parameters.append({
             'name': param_name,
             'data': param_data,
@@ -555,16 +511,9 @@ def dataProcessing(data, start, end,freq='D'):
             'alpha' : alpha,
             'beta' : beta,
             'gamma' : gamma
-            
-            
             # 'trend': None if param_name in ['Temperature','Humidity'] else 'multiplicative' if param_name == 'Wind' else 'additive' if param_name == 'Rainfall' else None,
             # 'seasonal': None,
         })
-
-        # #print parameter name
-        # print("Data parameter")
-        # print(param_name)
-        # print(param_data)
 
         globals()[f'{param_name.lower()}_list'] = param_list
 
@@ -572,14 +521,9 @@ def dataProcessing(data, start, end,freq='D'):
     error_result = []
     # date list from start to end
     date_list = pd.date_range(start, end, freq=freq).tolist()
-
-
     # Looping for prediction
     for param in parameters:
-        
         result = Prediction(param['data'], param['seasonal'], param['trend'],param['periode'],param['alpha'] ,param['beta'], param['gamma'],start, end)
-            
-        # result = Prediction(param['data'], param['seasonal'], param['trend'], 4, 0.9, 0.1, 0.1, start, end)
         predict_result.append({param['name']: result['predictions']})
         error_result.append({
             param['name']: {
@@ -594,23 +538,23 @@ def dataProcessing(data, start, end,freq='D'):
     ## Fuzzy Universe
     def fuzzy(value):
         result=[]
-        fwi = ctrl.Antecedent(np.arange(0, 30, 1), 'x') 
-        fwi['biru'] = fuzz.trapmf(fwi.universe, [0, 0, 1, 2])
-        fwi['hijau'] = fuzz.trapmf(fwi.universe, [1, 2, 6, 7])
-        fwi['kuning'] = fuzz.trimf(fwi.universe, [6, 7, 13])
-        fwi['merah'] = fuzz.trapmf(fwi.universe, [7, 13, np.inf, np.inf])
 
-        fwi_level_biru = fuzz.interp_membership(fwi.universe, fwi['biru'].mf, value)
-        fwi_level_hijau = fuzz.interp_membership(fwi.universe, fwi['hijau'].mf, value)
-        fwi_level_kuning = fuzz.interp_membership(fwi.universe, fwi['kuning'].mf, value)
-        fwi_level_merah = fuzz.interp_membership(fwi.universe, fwi['merah'].mf, value)
-        result = [fwi_level_biru, fwi_level_hijau, fwi_level_kuning, fwi_level_merah]
-        
-        plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
-        plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
-        plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
-        plt.plot(fwi.universe, fwi['merah'].mf, 'r', linewidth=1.5, label='Merah')
-        # plt.show()
+
+
+        if value <= 1 :
+            result = [1, 0, 0, 0]
+        elif value > 1 and value <= 6 :
+            result = [0, 1, 0, 0]
+        elif value > 6 and value <= 13 :
+            result = [0, 0, 1, 0]
+        else :
+            result = [0, 0, 0, 1]
+
+        # plt.plot(fwi.universe, fwi['biru'].mf, 'b', linewidth=1.5, label='Biru')
+        # plt.plot(fwi.universe, fwi['hijau'].mf, 'g', linewidth=1.5, label='Hijau')
+        # plt.plot(fwi.universe, fwi['kuning'].mf, 'y', linewidth=1.5, label='Kuning')
+        # plt.plot(fwi.universe, fwi['merah'].mf, 'r', linewidth=1.5, label='Merah')
+        # # plt.show()
         return result
     
     # Get Prediction result from each parameter list 
@@ -709,41 +653,40 @@ def ForecastProcessing(data, fore,freq='D'):
         #print 7 data last from param_data
         
         # print("Data parameter")
-        print(param_data.tail(7))
+        # print(param_data.tail(7))
         # Test_kalkulasi()
         param_list = param_data[param_name].tolist()
 
         # #conditional argument Property for parameter
         if param_name == 'Temperature' :
             x = 'additive'
-            y = 'additive'
-            period = 4
-            alpha = 0.3
-            beta = 0.3
-            gamma = 0.3  
-        elif param_name == 'Humidity' :
-            x = 'additive'
             y = None
             period = 4
             alpha = 0.9
+            beta = 0.2
+            gamma = 0.1  
+        elif param_name == 'Humidity' :
+            x = None
+            y = 'additive'
+            period = 4
+            alpha = 0.9
             beta = 0.1
-            gamma = 0.1      
+            gamma = 0.1   
 
         elif param_name == 'Wind' :
             x = 'additive'
             y = 'additive'
             period = 4
-            alpha = 0.3
-            beta = 0.3
-            gamma = 0.3
+            alpha = 0.9
+            beta = 0.1
+            gamma = 0.1  
         else :
-            x = 'additive'
-            y = None
+            x = 'multiplicative'
+            y = 'additive'
             period = 4
             alpha = 0.9
             beta = 0.1
-            gamma = 0.1
-            # Test_kalkulasi()
+            gamma = 0.3  
 
             #'additive'zz
             #'multiplicative'
@@ -890,7 +833,6 @@ def get_credentials():
 def get_forecast():
     sheetName = request.args.get('sheetName')
     worksheetName = request.args.get('worksheetName')
-    # periods = request.args.get('periods')
     fore = request.args.get('fore')
 
     scope_app =['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
