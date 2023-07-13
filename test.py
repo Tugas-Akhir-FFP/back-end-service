@@ -3,12 +3,34 @@ from flask_restful import Resource, Api
 from flask_cors import CORS
 import gspread
 import pandas as pd
-import numpy as np
 from oauth2client.service_account import ServiceAccountCredentials
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 from sklearn.metrics import mean_squared_error
 import math
+from sklearn.metrics import r2_score
+
+
+import numpy as np
+
+actual = np.array([33, 32.8, 31.4, 33.2, 33.4, 32.8, 33.6, 33.4, 32.6, 33, 33.5, 32.7, 33.2, 32, 32.2, 33.2, 33.4, 32.8, 33.4, 33.4, 32.6, 33.7, 33, 32.8, 33, 33.5, 32.5, 32.2, 32.2, 28.5])
+predicted = np.array([32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32.7, 32])
+
+# bulatkan nilai prediksi ke bawah atau ke atas
+# predicted = np.floor(predicted)
+# print(predicted)
+
+n = len(actual)
+r = (n*(sum(actual*predicted)) - sum(actual)*sum(predicted)) / math.sqrt((n*sum(actual**2) - sum(actual)**2)*(n*sum(predicted**2) - sum(predicted)**2))
+
+print(r2_score)
+r2 = r**2
+print(r2)
+
+adj_r2 = 1 - (1-r2)*(n-1)/(n-1-1)
+
+print(adj_r2)
+
 
 def fwiCalculation(Temp, rh, wind, rainfall): 
     fwi_VALUE = []
