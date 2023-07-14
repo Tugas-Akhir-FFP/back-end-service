@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: be-ff-tio
+  namespace: gaboot
+  labels:
+    app: be-ff-tio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: be-ff-tio
+  template:
+    metadata:
+      labels:
+        app: be-ff-tio
+    spec:
+      containers:
+      - name: be-single-service
+        image: registry.gitlab.com/agustio719/back-end-service/develop:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            cpu: 400m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+      imagePullSecrets:
+      - name: gitlab-registry-credentials-tio-kocak
