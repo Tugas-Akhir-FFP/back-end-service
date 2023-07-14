@@ -38,16 +38,14 @@ def grid_search(df):
     #Kotawaringin df[1:1451], df[1451:1471]
     # #Sidoarjo df[1:2439], df[2439:2459]wewewew
     # train, test = df[1:high], df[low:high]
-    mid = 1630
-    low = 1601
-    high = 1607
-
+    mid = 1613
     train = df[0:mid]
-    test = [1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0]
+    actual = np.array([0.0, 0.0, 2.0, 0.0, 0.0, 10.6, 0.0, 0.0, 0.0, 0.0, 10.0, 9.3, 0.8, 6.5, 25.8, 0.0, 0.0, 1.5, 0.0, 0.0, 0.0, 20.0, 0.0, 16.7, 15.7, 15.7, 16.0, 16.7, 15.7, 15.0])
 
-    data = train.values
-    x = z_score(data)
-    # fore = 7
+    # data = train.values
+    # x = z_score(data)
+    x = train
+    fore = 30
     results = []
     for seasonal in param_grid['seasonal']:
         for trend in param_grid['trend']:
@@ -56,7 +54,7 @@ def grid_search(df):
                     for smoothing_trend in param_grid['smoothing_trend']:
                         for smoothing_seasonal in param_grid['smoothing_seasonal']:
                             try:
-                                model = ExponentialSmoothing(train, 
+                                model = ExponentialSmoothing(x, 
                                                             seasonal=seasonal, 
                                                             trend=trend, 
                                                             seasonal_periods=seasonal_period)
@@ -68,23 +66,27 @@ def grid_search(df):
 
                                 #create predict 20 data
                                 #predict sama as data test
-                                predictions = model_fit.forecast(steps=7)
-                                predictions = z_score_DeStandardization(predictions, data)
+                                predictions = model_fit.forecast(steps=fore)
+                                # predictions = z_score_DeStandardization(predictions, data)
                                 predictions = np.array(predictions).flatten().__abs__().round(1)
-    
+                                
+                                n = len(actual)
+                                r = (n*(sum(actual*predictions)) - sum(actual)*sum(predictions)) / math.sqrt((n*sum(actual**2) - sum(actual)**2)*(n*sum(predictions**2) - sum(predictions)**2))
+
+                                mse = np.square(np.subtract(actual,predictions)).mean()
+                                r2 = r**2
+                                r2 = round(r2,2)                              
                                 # test = z_score(test)
                                 # predictions = z_score(predictions)
                                 print(predictions, "Ini hasil forecastnya bwang : ")
-                                r2 = r2_score(test, predictions)
+                                # r2 = r2_score(actual, predictions)
                                 
-                                mse = mean_squared_error(test, predictions)
-                                rmse = math.sqrt(mse)
-                                results.append((seasonal,trend, seasonal_period, smoothing_level, smoothing_trend, smoothing_seasonal,r2))
+                                results.append((seasonal,trend, seasonal_period, smoothing_level, smoothing_trend, smoothing_seasonal,mse))
                             except:
                                 print('error')
     
     # Cari parameter yang menghasilkan r-square terbaik, udah di save
-    best_params = max(results,key=lambda x: x[-1])
+    best_params = min(results,key=lambda x: x[-1])
     model = ExponentialSmoothing(train,
                                 seasonal=best_params[0],
                                 trend=best_params[1],
@@ -92,13 +94,13 @@ def grid_search(df):
     model_fit = model.fit(smoothing_level=best_params[3], 
                           smoothing_trend=best_params[4], 
                           smoothing_seasonal=best_params[5])
-    predictions = model_fit.forecast(steps=7)
+    predictions = model_fit.forecast(steps=fore)
     #change prediction value round to 2 decimal
     predictions = np.array(predictions).flatten().__abs__().round(1)
-    test = np.array(test).flatten()
+    test = np.array(actual).flatten()
 
-    mse = np.square(np.subtract(test,predictions)).mean()
-    r2 = r2_score(test, predictions)
+    mse = np.square(np.subtract(actual,predictions)).mean()
+    r2 = r2_score(actual, predictions)
     rmse = math.sqrt(mse)
     # mape = np.mean((np.abs(predictions - test)/np.abs(test))* 100)
     hasil = {}
@@ -116,7 +118,27 @@ def grid_search(df):
     return predictions.tolist() 
 
 # Z-Score Standardization
-def z_score(data):
+def z_score_calculation(data):
+    # Create a copy of the data to avoid modifying the original array
+    data = np.copy(data)
+
+    # Create conditional for same value
+    unique_values, value_counts = np.unique(data, return_counts=True)
+    if np.all(value_counts > 1):
+        # Add 0.1 to every other occurrence of the duplicate values
+        add_value = 0.1
+        for value in unique_values:
+            duplicate_indices = np.where(data == value)[0]
+            for i in range(len(duplicate_indices)):
+                data[duplicate_indices[i]] += (i % 2) * add_value
+
+    mean = np.mean(data)
+    std = np.std(data)
+    z_scores_data = (data - mean) / std
+
+    return z_scores_data
+
+def z_score_standard(data):
     # Create a copy of the data to avoid modifying the original array
     data = np.copy(data)
 
@@ -159,33 +181,65 @@ def z_score_DeStandardization(data, original_data):
     z_scores = (data * std) + mean
     return z_scores
 
-def Test_kalkulasi():
-    x = [15.8, 9.2, 4.9, 1.3, 13.9, 7.3, 3.0]
-    test = [15.7, 15.7, 15.7, 15.7, 15.7, 15.7, 0.1]
+def calculate_adjusted_r_squared(y_actual, y_predicted, n, k):
+    
+    # Hitung nilai R-squared
+    r_squared = r2_score(y_actual, y_predicted)
+    
+    # Hitung Adjusted R-squared
+    adjusted_r_squared = 1 - ((1 - r_squared) * (n - 1) / (n - k - 1))
+    
+    return adjusted_r_squared
 
-    pred = z_score(x)
-    test = z_score(test)
+def Test_kalkulasi():
+    predict = np.array([32.9, 32.7, 32.6, 33.1, 32.9, 32.7, 32.6, 33.1, 32.9, 32.7, 32.6, 33.1, 32.9, 32.7, 32.6, 33.1, 32.9, 32.7, 32.6, 33.1, 32.9, 32.7, 32.6, 33.1, 32.9, 32.7, 32.6, 33.1, 32.9, 32.7])
+    actual = np.array([33, 32.8, 31.4, 33.2, 33.4, 32.8, 33.6, 33.4, 32.6, 33, 33.5, 32.7, 33.2, 32, 32.2, 33.2, 33.4, 32, 32.4, 34, 33.8, 32.6, 33, 32.5, 32.2, 32.1, 32.1, 32.1, 32.2, 32])
+
+    print(predict, "prediksi")
+
+    n = len(actual)
+    r = (n*(sum(actual*predict)) - sum(actual)*sum(predict)) / math.sqrt((n*sum(actual**2) - sum(actual)**2)*(n*sum(predict**2) - sum(predict)**2))
+
+    r2 = r**2
+    #r2 round 2 decimal
+    r2 = round(r2,2)
+    adjust_r2 = 1 - (1-r2)*(n-1)/(n-1-1)
+
+    print("r2 nya bwang : ", r2)
+    print("adjusted r2 nya bwang : ", adjust_r2)
+
+
+
+
+
+    # pred = z_score(x)
+    # test = z_score(test)
     # pred = x
     # test = test
     # pred = np.array(pred).flatten().__abs__().round(1)
     # test = np.array(test).flatten()
 
-    print("Hasil Z-score")
-    print(pred, "prediksi")
-    print(test, "test")
+    # print("Hasil Z-score")
+    # print(pred, "prediksi")
+    # print(test, "test")
+    # n = len(test)
+    # k = 1
 
-    mae = np.mean(np.abs(pred - test))
-    mape = np.mean((np.abs(pred - test)/np.abs(test))*100)
-    mse = np.square(np.subtract(test,pred)).mean()
-    r2 = r2_score(test, pred)
-    rmse = math.sqrt(mse)
+    # adjusted_r2_score = calculate_adjusted_r_squared(test, x, n, k)
 
-    print("Ini hasilnya")
-    print(mae, "mae")
-    print(mape, "mape")
-    print(mse, "mse")
-    print(r2, "r2")
-    print(rmse, "rmse")
+    # # mae = np.mean(np.abs(pred - test))
+    # # mape = np.mean((np.abs(pred - test)/np.abs(test))*100)
+    # # mse = np.square(np.subtract(test,pred)).mean()
+    # r2 = r2_score(test, x)
+    # # rmse = math.sqrt(mse)
+
+    # # print("Ini hasilnya")
+    # # print(mae, "mae")
+    # # print(mape, "mape")
+    # # print(mse, "mse")
+    # print(r2, "r2 nya bwang")
+    # print(adjusted_r2_score, "adjusted r2 nya bwang")
+    # print(rmse, "rmse")
 
 
 def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, end):
@@ -193,6 +247,9 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
     high = df.index.get_loc(end)
 
     train, test = df[1:high], df[low:high]
+
+    # data = train.values
+    # x = z_score(data)
 
     model = ExponentialSmoothing(train,
                                 seasonal=seasonal,
@@ -204,19 +261,22 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
     
     print(low, high, "ini low high")
     predictions = model_fit.predict(start=low, end= high-1)
+
+    # predictions = z_score_DeStandardization(predictions, data)
+
     print(predictions, "Hasil Prediksi")
     predictions = np.array(predictions).flatten().__abs__().round(1)
-    test = np.array(test).flatten()
+    test = np.array(test).flatten().__abs__().round(1)
 
+    # ## Implement Z-score for error calculation
+    z_predictions = z_score_calculation(predictions)
+    z_test = z_score_calculation(test)
 
-    ## Implement Z-score
-    z_predictions = z_score(predictions)
-    z_test = z_score(test)
 
     mae = np.mean(np.abs(z_predictions - z_test))
     mape = np.mean((np.abs(z_predictions - z_test)/np.abs(test))* 100)
     mse = np.square(np.subtract(z_test,z_predictions)).mean()
-    r2 = r2_score(z_test, z_predictions)
+    r2 = r2_score(test, predictions)
     rmse = math.sqrt(mse)
 
     return {
@@ -228,14 +288,25 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
         'rmse' : rmse
     }
 
-def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
+def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore, do_zscore):
     high = df.index.get_loc(end)
     train = df[0:high]
+    # print(train, "ini train")
+    # print(high, "ini high")
+    # print(end, "ini end")
+    #print head
+    # print(train.tail())
+    # print(high, "ini high")
 
-    # implement z-score for train data
+    # # implement z-score for train data
     # data = train.values
     # x = z_score(data)
-    x = train
+    # data = []
+    if do_zscore == True:
+        data = train.values
+        x = z_score_standard(data)
+    else : 
+        x = train
     model = ExponentialSmoothing(x,
                                 seasonal=seasonal,
                                 trend=trend,
@@ -245,10 +316,15 @@ def Forecast(df, seasonal, trend, periods, slevel, stren, sseasonal, end, fore):
                         smoothing_seasonal=sseasonal)
     # Forecast data z-score
     forecast = model_fit.forecast(steps=fore)
+    if do_zscore == True:
+        forecast = z_score_DeStandardization(forecast,train.values)
+        forecast = np.array(forecast).flatten().__abs__().round(1)
+    else : 
+        forecast = np.array(forecast).flatten().__abs__().round(1)    
     #  z-score destandardization for forecast data  
     # forecast = z_score_DeStandardization(forecast, data)
 
-    forecast = np.array(forecast).flatten().__abs__().round(1)
+    # forecast = np.array(forecast).flatten().__abs__().round(1)
     # print(forecast, "ini hasil forecastnya bwang : ")
     return forecast.tolist()
 
@@ -305,12 +381,11 @@ def fwiCalculation(Temp, rh, wind, rainfall):
         if Ed > mo:
             Ew = 0.618 * (current_rh ** 0.753) + (10.0 * math.exp((current_rh - 100.0) / 10.0)) + 0.18 * (21.1 - current_temp) * (1.0 - 1.0 / math.exp(0.115 * current_rh))
             if mo < Ew:
-                k1 = 0.424 * (1.0 - (100.0 - current_rh / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - (100.0 - current_rh / 100.0) ** 8)
+                k1 = 0.424 * (1.0 - ((100.0 - current_rh) / 100.0) ** 1.7) + (0.0694 * math.sqrt(windkmh)) * (1.0 - ((100.0 - current_rh) / 100.0) ** 8)
                 kw = k1 * (0.581 * math.exp(0.0365 * current_temp))
                 m = Ew - (Ew - mo) * 10 **(-kw)
             else:
                 m = mo
-
         else:
             k0 = 0.424 * (1.0 - ((current_rh / 100.0) ** 1.7)) + (0.0694 * math.sqrt(windkmh)) * (1.0 - ((current_rh / 100.0)) ** 8)
             kd = k0 * (0.581 * math.exp(0.0365 * current_temp))
@@ -344,12 +419,12 @@ def fwiCalculation(Temp, rh, wind, rainfall):
             #MRT Section
             wmr = wmi + 1000 * rw / (48.77 + b * rw)
             pr = 244.72-43.43 * math.log(wmr - 20.0)
-            dmc = pr + 100.0 * mth
-            
-        else:
-            pr = dmc_prev
             if pr < 0.0:
                 pr = 0.0
+            dmc = pr + 100.0 * mth
+          
+        else:
+            pr = dmc_prev
             dmc = pr + 100.0 * mth
         
         ## DC SECTION
@@ -427,10 +502,10 @@ def fwiCalculation(Temp, rh, wind, rainfall):
 
 def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list):
     # ## NOTEEE : Data dari canada, rumus windkmh dari line 175 ( windkmh = current_wind)
-    # temperature_list = [34.4, 34.4, 34.4, 34.0, 34.0, 34.0, 33.0]
-    # humidity_list = [81.0, 80.0, 81.0, 89.0, 85.0, 82.0, 88.0]
-    # rainfall_list = [0.2, 0.2, 0.2, 0.2, 31.9, 31.9, 7.7]
-    # wind_list = [3.0, 4.0, 4.0, 7.0, 5.0, 7.0, 4.0]
+    # temperature_list = [33.0, 32.8, 32.6, 32.5, 32.4, 32.0, 33.0, 32.4, 32.0, 32.0, 32.0, 32.0, 31.2, 31.0, 31.4, 31.2, 31.4, 31.8, 31.4, 31.4, 31.0, 30.5, 31.8, 31.0, 28.0, 30.5, 30.5, 31.2, 30.2, 28.5]
+    # humidity_list = [85, 82, 81, 81, 82, 80, 80, 79, 80, 80, 81, 80, 81, 81, 78, 79, 80, 79, 80, 77, 78, 76, 76, 77, 80, 80, 76, 78, 80, 78]
+    # rainfall_list = [5.0, 5.0, 2.0, 2.0, 1.0, 1.5, 2.0, 2.0, 2.0, 2.0, 5.0, 5.0, 5.0, 5.0, 3.8, 6.0, 6.0, 10.5, 6.0, 6.0, 7.0, 7.0, 6.0,6.0, 10.0, 10.0, 12.6, 10.7, 10.1, 18.5]
+    # wind_list = [6, 5, 4, 5, 5, 5, 5, 4, 4, 5, 5, 6, 6, 5, 4, 5, 6, 5, 5, 4, 4, 5, 4, 5, 5, 5, 3, 4, 6, 4]
     data_list = []
 
     ffmc_list, dmc_list, dc_list, bui_list, isi_list, fwi_list = fwiCalculation(temperature_list, humidity_list, wind_list, rainfall_list)
@@ -447,12 +522,33 @@ def calculate_fwi_list(temperature_list, humidity_list, wind_list, rainfall_list
     return data_list
 
 def dataProcessing(data, start, end,freq='D'):
-    def pre_Fix_data(data) :
-        data = data.replace('', np.nan)
-        data = data.replace(['0'], np.nan)
-        data = data.replace(['8888', ''], np.nan)
-        data = data.astype(float)
-        data = data.fillna(method='ffill').fillna(method='bfill')         
+    # def pre_Fix_data(data) :
+    #     data = data.replace('', np.nan)
+    #     data = data.replace(['0'], np.nan)
+    #     data = data.replace(['8888', ''], np.nan)
+    #     data = data.astype(float)
+    #     data = data.fillna(method='ffill').fillna(method='bfill')         
+    #     return data
+
+    def pre_Fix_data(method,data) :
+        # data = data.replace('', np.nan)
+        # # data = data.replace(['0'], np.nan)
+        # data = data.replace(['8888', ''], np.nan)
+        # data = data.astype(float)
+        # data = data.fillna(data.mean())
+        if method == True :
+            data = data.replace('', np.nan)
+            # data = data.replace(['0'], np.nan)
+            data = data.replace(['8888', ''], np.nan)
+            data = data.astype(float)
+            data = data.fillna(method='ffill').fillna(method='bfill')
+        else :
+            data = data.replace('', np.nan)
+            data = data.replace(['0'], np.nan)
+            data = data.replace(['8888', ''], np.nan)
+            data = data.astype(float)
+            data = data.fillna(data.mean())
+        # data = data.fillna(data.mean())
         return data
     
     index = pd.date_range(start, end, freq=freq)
@@ -470,7 +566,14 @@ def dataProcessing(data, start, end,freq='D'):
 
     for param_name in parameters_names : 
         param_data = df[['Date', param_name]].set_index('Date')
-        param_data = pre_Fix_data(param_data).resample('D').mean()
+
+        if param_name == 'Rainfall' :
+            method = True
+            param_data = pre_Fix_data(method,param_data)
+        else :
+            method = False
+            param_data = pre_Fix_data(method,param_data)
+        # param_data = pre_Fix_data(param_data).resample('D').mean()
         param_list = param_data[param_name].tolist()
 
         #conditional argument for parameter
@@ -624,12 +727,25 @@ def dataProcessing(data, start, end,freq='D'):
 ## Data processing for forecast
 
 def ForecastProcessing(data, fore,freq='D'):
-    def pre_Fix_data(data) :
-        data = data.replace('', np.nan)
-        data = data.replace(['0'], np.nan)
-        data = data.replace(['8888', ''], np.nan)
-        data = data.astype(float)
-        data = data.fillna(data.mean())
+    def pre_Fix_data(method,data) :
+        # data = data.replace('', np.nan)
+        # # data = data.replace(['0'], np.nan)
+        # data = data.replace(['8888', ''], np.nan)
+        # data = data.astype(float)
+        # data = data.fillna(data.mean())
+        if method == True :
+            data = data.replace('', np.nan)
+            # data = data.replace(['0'], np.nan)
+            data = data.replace(['8888', ''], np.nan)
+            data = data.astype(float)
+            data = data.fillna(method='ffill').fillna(method='bfill')
+        else :
+            data = data.replace('', np.nan)
+            data = data.replace(['0'], np.nan)
+            data = data.replace(['8888', ''], np.nan)
+            data = data.astype(float)
+            data = data.fillna(data.mean())
+        # data = data.fillna(data.mean())
         return data
     
     df = pd.DataFrame(data)
@@ -648,46 +764,54 @@ def ForecastProcessing(data, fore,freq='D'):
 
     for param_name in parameters_names : 
         param_data = df[['Date', param_name]].set_index('Date')
-        param_data = pre_Fix_data(param_data)
-    
+        if param_name == 'Rainfall' :
+            method = True
+            param_data = pre_Fix_data(method,param_data)
+        else :
+            method = False
+            param_data = pre_Fix_data(method,param_data)
         #print 7 data last from param_data
         
         # print("Data parameter")
-        # print(param_data.tail(7))
+        # print(param_data.tail(30))
         # Test_kalkulasi()
         param_list = param_data[param_name].tolist()
 
         # #conditional argument Property for parameter
         if param_name == 'Temperature' :
-            x = 'additive'
-            y = None
-            period = 4
-            alpha = 0.9
-            beta = 0.2
-            gamma = 0.1  
-        elif param_name == 'Humidity' :
-            x = None
-            y = 'additive'
-            period = 4
-            alpha = 0.9
-            beta = 0.1
-            gamma = 0.1   
-
-        elif param_name == 'Wind' :
-            x = 'additive'
-            y = 'additive'
-            period = 4
-            alpha = 0.9
-            beta = 0.1
-            gamma = 0.1  
-        else :
             x = 'multiplicative'
             y = 'additive'
             period = 4
+            alpha = 0.6
+            beta = 0.30000000000000004
+            gamma = 0.1
+
+            #256
+            # grid_search(param_data)
+        elif param_name == 'Humidity' :
+            x = 'additive'
+            y = 'multiplicative'
+            period = 12
+            alpha = 0.2
+            beta = 0.4
+            gamma = 0.1   
+            # grid_search(param_data)
+        elif param_name == 'Wind' :
+            x = None
+            y = 'multiplicative'
+            period = 12
             alpha = 0.9
             beta = 0.1
-            gamma = 0.3  
-
+            gamma = 0.2
+            # grid_search(param_data)
+        else :
+            x = 'additive'
+            y = None
+            period = 4
+            alpha = 0.5
+            beta = 0.1
+            gamma = 0.1
+            # grid_search(param_data)
             #'additive'zz
             #'multiplicative'
 
@@ -716,7 +840,12 @@ def ForecastProcessing(data, fore,freq='D'):
     forecast_result = []
     # Looping for prediction
     for param in parameters:
-        forecast = Forecast(param['data'], param['seasonal'], param['trend'],param['periode'],param['alpha'] ,param['beta'], param['gamma'], last_date,fore)
+        if param['name'] == 'rainfall' :
+            do_z_score = True
+            forecast = Forecast(param['data'], param['seasonal'], param['trend'],param['periode'],param['alpha'] ,param['beta'], param['gamma'], last_date,fore, do_z_score)
+        else : 
+            do_z_score = False
+            forecast = Forecast(param['data'], param['seasonal'], param['trend'],param['periode'],param['alpha'] ,param['beta'], param['gamma'], last_date,fore, do_z_score)
         # forecast = Forecast(param['data'], 'additive', 'additive', 4, 0.3, 0.3, 0.3, last_date, fore)
         # Test_kalkulasi()
         forecast_result.append({param['name']: forecast})
