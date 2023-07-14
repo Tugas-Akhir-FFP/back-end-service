@@ -259,12 +259,12 @@ def Prediction(df, seasonal, trend, periods, slevel, stren, sseasonal, start, en
                         smoothing_trend=stren, 
                         smoothing_seasonal=sseasonal)
     
-    print(low, high, "ini low high")
+    # print(low, high, "ini low high")
     predictions = model_fit.predict(start=low, end= high-1)
 
     # predictions = z_score_DeStandardization(predictions, data)
 
-    print(predictions, "Hasil Prediksi")
+    # print(predictions, "Hasil Prediksi")
     predictions = np.array(predictions).flatten().__abs__().round(1)
     test = np.array(test).flatten().__abs__().round(1)
 
